@@ -103,6 +103,13 @@ int TrueAudio::Properties::bitsPerSample() const
   return d->bitsPerSample;
 }
 
+//JBH ==========================================================================<
+int TrueAudio::Properties::bitwidth() const //JBH
+{
+  return d->bitsPerSample;
+}
+//JBH ==========================================================================>
+
 int TrueAudio::Properties::channels() const
 {
   return d->channels;

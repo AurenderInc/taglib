@@ -104,6 +104,13 @@ int IT::Properties::sampleRate() const
   return 0;
 }
 
+//JBH ==========================================================================<
+int IT::Properties::bitwidth() const //JBH
+{
+  return 0;
+}
+//JBH ==========================================================================>
+
 int IT::Properties::channels() const
 {
   return d->channels;

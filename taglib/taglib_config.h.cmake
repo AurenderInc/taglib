@@ -8,4 +8,17 @@
 #define   TAGLIB_WITH_ASF 1
 #define   TAGLIB_WITH_MP4 1
 
+//JBH ==========================================================================<
+/* Defined if an (external) app logger is to be used */
+#cmakedefine   USE_APP_LOGGER 1
+#cmakedefine   USE_QXTLOGGER 1
+#cmakedefine   USE_JBHLOGGER 1
+
+/* Defined for a general purpose build (not for AMS) */
+#cmakedefine   JBH_BUILD_FOR_GENERAL 1
+
+/* Defined if an embedded unicode encoder is to be used */
+#cmakedefine   JBH_USE_EMBEDDED_UNICODE_ENCODER 1
+//JBH ==========================================================================>
+
 #endif

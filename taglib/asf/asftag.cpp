@@ -110,6 +110,21 @@ String ASF::Tag::genre() const
   return String();
 }
 
+//JBH ==========================================================================<
+String ASF::Tag::guid() const
+{
+#ifdef JBH_USE_WM
+  if(d->attributeListMap.contains("WM/GUID"))
+    return d->attributeListMap["WM/GUID"][0].toString();
+  return String::null;
+#else
+  if(d->attributeListMap.contains("GUID"))
+    return d->attributeListMap["GUID"][0].toString();
+  return String::null;
+#endif
+}
+//JBH ==========================================================================>
+
 void ASF::Tag::setTitle(const String &value)
 {
   d->title = value;

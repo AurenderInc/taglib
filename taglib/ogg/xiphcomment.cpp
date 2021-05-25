@@ -37,7 +37,7 @@ namespace
   typedef Ogg::FieldListMap::Iterator FieldIterator;
   typedef Ogg::FieldListMap::ConstIterator FieldConstIterator;
 
-  typedef List<FLAC::Picture *> PictureList;
+  typedef List<TagLib::FLAC::Picture *> PictureList; //JBH fixed for clarity, avoiding confusion between TagLib::Ogg::FLAC and TagLib::FLAC.
   typedef PictureList::Iterator PictureIterator;
   typedef PictureList::Iterator PictureConstIterator;
 }
@@ -138,6 +138,26 @@ unsigned int Ogg::XiphComment::track() const
     return d->fieldListMap["TRACKNUM"].front().toInt();
   return 0;
 }
+
+//JBH ==========================================================================<
+//JBH: Aurender extension to support waki
+String Ogg::XiphComment::waki() const
+{
+  if(d->fieldListMap["WAKI"].isEmpty())
+    return String::null;
+  return d->fieldListMap["WAKI"].toString();
+}
+//JBH ==========================================================================>
+
+//JBH ==========================================================================<
+//JBH: Aurender extension to support the file guid
+String Ogg::XiphComment::guid() const
+{
+  if(d->fieldListMap["GUID"].isEmpty())
+    return String::null;
+  return d->fieldListMap["GUID"].toString();
+}
+//JBH ==========================================================================>
 
 void Ogg::XiphComment::setTitle(const String &s)
 {
@@ -327,7 +347,7 @@ bool Ogg::XiphComment::contains(const String &key) const
   return !d->fieldListMap[key.upper()].isEmpty();
 }
 
-void Ogg::XiphComment::removePicture(FLAC::Picture *picture, bool del)
+void Ogg::XiphComment::removePicture(TagLib::FLAC::Picture /*JBH fixed*/ *picture, bool del)
 {
   PictureIterator it = d->pictureList.find(picture);
   if(it != d->pictureList.end())
@@ -342,12 +362,12 @@ void Ogg::XiphComment::removeAllPictures()
   d->pictureList.clear();
 }
 
-void Ogg::XiphComment::addPicture(FLAC::Picture * picture)
+void Ogg::XiphComment::addPicture(TagLib::FLAC::Picture /*JBH fixed*/ * picture)
 {
   d->pictureList.append(picture);
 }
 
-List<FLAC::Picture *> Ogg::XiphComment::pictureList()
+List<TagLib::FLAC::Picture /*JBH fixed*/ *> Ogg::XiphComment::pictureList()
 {
   return d->pictureList;
 }
@@ -485,7 +505,7 @@ void Ogg::XiphComment::parse(const ByteVector &data)
 
         // Decode FLAC Picture
 
-        FLAC::Picture * picture = new FLAC::Picture();
+        TagLib::FLAC::Picture * picture = new TagLib::FLAC::Picture(); //JBH fixed for clarity, avoiding confusion between TagLib::Ogg::FLAC and TagLib::FLAC.
         if(picture->parse(picturedata)) {
           d->pictureList.append(picture);
         }
@@ -498,10 +518,10 @@ void Ogg::XiphComment::parse(const ByteVector &data)
 
         // Assume it's some type of image file
 
-        FLAC::Picture * picture = new FLAC::Picture();
+        TagLib::FLAC::Picture * picture = new TagLib::FLAC::Picture(); //JBH fixed for clarity, avoiding confusion between TagLib::Ogg::FLAC and TagLib::FLAC.
         picture->setData(picturedata);
         picture->setMimeType("image/");
-        picture->setType(FLAC::Picture::Other);
+        picture->setType(TagLib::FLAC::Picture::Other); //JBH fixed for clarity, avoiding confusion between TagLib::Ogg::FLAC and TagLib::FLAC.
         d->pictureList.append(picture);
       }
     }

@@ -123,6 +123,13 @@ unsigned int RIFF::Info::Tag::track() const
   return fieldText("IPRT").toInt();
 }
 
+//JBH ==========================================================================<
+String RIFF::Info::Tag::guid() const
+{
+  return fieldText("GUID");
+}
+//JBH ==========================================================================>
+
 void RIFF::Info::Tag::setTitle(const String &s)
 {
   setFieldText("INAM", s);

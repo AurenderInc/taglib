@@ -87,6 +87,8 @@ namespace TagLib {
       virtual String genre() const;
       virtual unsigned int year() const;
       virtual unsigned int track() const;
+      virtual String waki() const; //JBH added
+      virtual String guid() const; //JBH added
 
       virtual void setTitle(const String &s);
       virtual void setArtist(const String &s);
@@ -234,13 +236,13 @@ namespace TagLib {
       /*!
        * Returns a list of pictures attached to the xiph comment.
        */
-      List<FLAC::Picture *> pictureList();
+      List<TagLib::FLAC::Picture *> pictureList(); //JBH fixed for clarity, avoiding confusion between TagLib::Ogg::FLAC and TagLib::FLAC.
 
       /*!
        * Removes an picture. If \a del is true the picture's memory
        * will be freed; if it is false, it must be deleted by the user.
        */
-      void removePicture(FLAC::Picture *picture, bool del = true);
+      void removePicture(TagLib::FLAC::Picture /*JBH fixed*/ *picture, bool del = true);
 
       /*!
        * Remove all pictures.
@@ -253,7 +255,7 @@ namespace TagLib {
        *
        * \note The file will be saved only after calling save().
        */
-      void addPicture(FLAC::Picture *picture);
+      void addPicture(TagLib::FLAC::Picture /*JBH fixed*/ *picture);
 
     protected:
       /*!

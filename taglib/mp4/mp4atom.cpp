@@ -160,9 +160,17 @@ MP4::Atoms::Atoms(File *file)
   file->seek(0);
   while(file->tell() + 8 <= end) {
     MP4::Atom *atom = new MP4::Atom(file);
+#define JBH_DO_NOT_APPEND_0_LENGTH_BLOCK
+#ifdef  JBH_DO_NOT_APPEND_0_LENGTH_BLOCK
+    if (atom->length == 0)
+      break;
+    else
+      atoms.append(atom);
+#else
     atoms.append(atom);
     if (atom->length == 0)
       break;
+#endif
   }
 }
 

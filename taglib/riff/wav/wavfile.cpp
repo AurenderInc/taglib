@@ -202,17 +202,67 @@ bool RIFF::WAV::File::hasInfoTag() const
 
 void RIFF::WAV::File::read(bool readProperties)
 {
+  /*
+   * JBH NOTE: The "wav" file consists of "chunks", such as
+   *           "fmt " chunk  --> format chunk --> "wave"
+   *           "data" chunk  --> the pcm
+   *           "LIST" chunk  --> metadata
+   *           "ID3 " chunk  --> metadata
+   *           "id3 " chunk  --> metadata
+   *           "ID32" chunk  --> metadata (is ID32 valid?)
+   *           "JUNK" chunk  --> junk data
+   *
+   *            The "wav" file keeps the metadata either in the "LIST INFO" chunk or the "ID3"chunk,
+   *            and we are interested only in the "LIST INFO" or "ID3" chunk.
+   *
+   *            The "LIST INFO" chunk is the original tagging of the wav, while the "ID3" chunk is introduced later.
+   *            "LIST INFO" tags:
+   *                Artist (IART)
+   *                Title (INAM) - called "Track Title" in Metadata Editor
+   *                Product (IPRD) - called "Album Title" in Metadata Editor
+   *                Track Number (ITRK) (not specified in the original RIFF standard but players supporting LIST INFO tags often support it)
+   *                Date Created (ICRD) - called "Year" in Metadata Editor
+   *                Genre (IGNR)
+   *                Comments (ICMT)
+   *                Copyright (ICOP)
+   *                Software (ISFT)
+   */
+
   for(unsigned int i = 0; i < chunkCount(); ++i) {
     const ByteVector name = chunkName(i);
+//JBH ==========================================================================<
+//JBH: Some malformed wav has "ID32" for the id3 chunk name, which is illegal but lets allow.
+#define JBH_ALLOW_ID32_AS_VALID_CHUNKNAME
+#ifdef  JBH_ALLOW_ID32_AS_VALID_CHUNKNAME
+    if(name == "ID3 " || name == "id3 " || name == "ID32" || name == "id32" || name == "ID3H") {
+#else
     if(name == "ID3 " || name == "id3 ") {
+#endif
+//JBH ==========================================================================<
       if(!d->tag[ID3v2Index]) {
         d->tag.set(ID3v2Index, new ID3v2::Tag(this, chunkOffset(i)));
         d->hasID3v2 = true;
       }
       else {
-        debug("RIFF::WAV::File::read() - Duplicate ID3v2 tag found.");
+        //JBH too many logs    debug("RIFF::WAV::File::read() - Duplicate ID3v2 tag found. New tag will not be added"); //JBH
+//JBH ==========================================================================<
+//JBH FIXME  #ifdef _WIN32
+//JBH FIXME          debug("JBH: WAV file: " + static_cast<TagLib::FileName>(name()).toString());
+//JBH FIXME  #else
+//JBH FIXME          debug("JBH: WAV file: " + String(name(), String::UTF8));
+//JBH FIXME  #endif
+//JBH ==========================================================================>
       }
     }
+//JBH ==========================================================================<
+//JBH: This block used to be there in the previous version of TagLib.
+#if 0
+    else if(name == "fmt " && readProperties)
+      formatData = chunkData(i);
+    else if(name == "data" && readProperties)
+      streamLength = chunkDataSize(i); //JBH NOTE: the chunk size of the "data" chunk is the streamLength, the length of the pure PCM data.
+#endif
+//JBH ==========================================================================>
     else if(name == "LIST") {
       const ByteVector data = chunkData(i);
       if(data.startsWith("INFO")) {
@@ -221,11 +271,34 @@ void RIFF::WAV::File::read(bool readProperties)
           d->hasInfo = true;
         }
         else {
-          debug("RIFF::WAV::File::read() - Duplicate INFO tag found.");
+          debug("RIFF::WAV::File::read() - Duplicate INFO tag found. New tag will not be added"); //JBH
+//JBH ==========================================================================<
+//JBH FIXME  #ifdef _WIN32
+//JBH FIXME            debug("JBH: WAV file: " + static_cast<FileName>(name()).toString());
+//JBH FIXME  #else
+//JBH FIXME            debug("JBH: WAV file: " + String(name(), String::UTF8));
+//JBH FIXME  #endif
+//JBH ==========================================================================>
         }
       }
     }
   }
+
+  /*
+   * JBH NOTE: The old TagLib used to consolidate "RIFF::Info::Tag" into "ID3v2::Tag", such as
+   *
+   *           if(!d->tag[ID3v2Index]) {
+   *               d->tag = new ID3v2::Tag;
+   *               if (d->tag[InfoIndex]) {
+   *                  TagLib::Tag::duplicate(d->tag[InfoIndex], d->tag, true);
+   *               }
+   *           }
+   *
+   *           New TagLib (1.9.1) has changed this policy and does not consolidate.
+   *           The client should check the existence of "RIFF::Info::Tag" and "ID3v2::Tag".
+   *
+   *           NOTE: It seems that TagLib 2.0 changes this policy again back to the consolidation.
+   */
 
   if(!d->tag[ID3v2Index])
     d->tag.set(ID3v2Index, new ID3v2::Tag());

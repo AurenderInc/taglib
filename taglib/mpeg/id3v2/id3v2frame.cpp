@@ -41,6 +41,13 @@
 #include "frames/uniquefileidentifierframe.h"
 #include "frames/unknownframe.h"
 
+//JBH <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+#include "charsetdetector.h"
+#include "charsetconverter.h"
+#endif
+//JBH >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
 using namespace TagLib;
 using namespace ID3v2;
 
@@ -210,6 +217,26 @@ Frame::Frame(Header *h) :
   d->header = h;
 }
 
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+Frame::Frame(const ByteVector &data, std::string orgCharSet, float orgCharSetConfidence) :
+  d(new FramePrivate())
+{
+  d->header = new Header(data);
+  setOrgCharSet(orgCharSet);
+  setOrgCharSetConfidence(orgCharSetConfidence);
+}
+
+Frame::Frame(Header *h, std::string orgCharSet, float orgCharSetConfidence) :
+  d(new FramePrivate())
+{
+  d->header = h;
+  setOrgCharSet(orgCharSet);
+  setOrgCharSetConfidence(orgCharSetConfidence);
+}
+#endif
+//JBH ==========================================================================>
+
 Frame::Header *Frame::header() const
 {
   return d->header;
@@ -278,7 +305,46 @@ String Frame::readStringField(const ByteVector &data, String::Type encoding, int
 
   String str;
   if(encoding == String::Latin1)
-    str = Tag::latin1StringHandler()->parse(data.mid(*position, end - *position));
+  {
+//JBH <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+      int res;
+      std::string charset;
+      float confidence;
+      String encoded_string;
+
+      //confidence = CHARSETDETECTOR::detectCharSet(data, charset);
+      //confidence = CHARSETDETECTOR::detectCharSet(data.mid(*position, end - *position), charset);
+      charset    = getOrgCharSet();
+      confidence = getOrgCharSetConfidence();
+      if ( (confidence > CHARSETDETECTOR_CONFIDENCE_THRESHOLD) && (charset != "UNKNOWN") )
+      {
+        res = CHARSETCONVERTER::encodeByteVectorToUTF16(data.mid(*position, end - *position), encoded_string, charset, CHARSETCONVERTER_TO_CHARSET);
+        if (res ==0)
+        {
+          str = encoded_string;
+        }
+        else
+        {
+          //fallback upon failure
+          str = String(data.mid(*position, end - *position), encoding);
+        }
+      }
+      else
+      {
+        str = String(data.mid(*position, end - *position), encoding);
+      }
+#else
+      /*
+       * JBH: callback the client-side-defined unicode encoder, if registered at the init stage of TagLib.
+       *      EX: at taglibfile.cpp@kid3, TagLib::ID3v2::Tag::setLatin1StringHandler(m_textCodecStringHandlerForID3v2); //JBH: register our own unicode encoder to TagLib, so that TagLib will call back.
+       *
+       * JBH: All "Non-Unicode" strings, such as EUC-KR and real Latin1, are marked "Latin1" in taglib.
+       */
+      str = Tag::latin1StringHandler()->parse(data.mid(*position, end - *position));   
+#endif
+//JBH >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>     
+  }
   else
     str = String(data.mid(*position, end - *position), encoding);
 
@@ -320,6 +386,32 @@ String::Type Frame::checkTextEncoding(const StringList &fields, String::Type enc
 {
   return checkEncoding(fields, encoding, header()->version());
 }
+
+
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+void Frame::setOrgCharSet(std::string orgCharSet)
+{
+  _orgCharSet = orgCharSet;
+}
+
+std::string Frame::getOrgCharSet()
+{
+  return _orgCharSet;
+}
+
+void  Frame::setOrgCharSetConfidence(float orgCharSetConfidence)
+{
+  _orgCharSetConfidence = orgCharSetConfidence;
+}
+
+float Frame::getOrgCharSetConfidence()
+{
+  return _orgCharSetConfidence;
+}
+#endif
+//JBH ==========================================================================>
+
 
 namespace
 {

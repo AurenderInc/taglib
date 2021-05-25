@@ -101,6 +101,13 @@ namespace TagLib {
        */
       virtual int channels() const;
 
+//JBH ==========================================================================<
+      /*!
+       * Returns the bit width of audio sample.
+       */
+      virtual int bitwidth() const;
+//JBH ==========================================================================>
+
       /*!
        * Returns a pointer to the Xing/VBRI header if one exists or null if no
        * Xing/VBRI header was found.

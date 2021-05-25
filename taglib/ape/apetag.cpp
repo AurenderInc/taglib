@@ -165,6 +165,15 @@ unsigned int APE::Tag::track() const
   return d->itemListMap["TRACK"].toString().toInt();
 }
 
+//JBH ==========================================================================<
+String APE::Tag::guid() const
+{
+  if(d->itemListMap["GUID"].isEmpty())
+    return String::null;
+  return d->itemListMap["GUID"].values().toString();
+}
+//JBH ==========================================================================>
+
 void APE::Tag::setTitle(const String &s)
 {
   addValue("TITLE", s, true);
@@ -351,6 +360,13 @@ void APE::Tag::setItem(const String &key, const Item &item)
 {
   if(!checkKey(key)) {
     debug("APE::Tag::setItem() - Couldn't set an item due to an invalid key.");
+//JBH ==========================================================================<
+  #ifdef _WIN32
+    debug("JBH: APE file: " + static_cast<FileName>(d->file->name()).toString()); //JBH add
+  #else
+    debug("JBH: APE file: " + String(d->file->name(), String::UTF8)); //JBH add
+  #endif
+//JBH ==========================================================================>
     return;
   }
 
@@ -371,13 +387,27 @@ void APE::Tag::read()
   if(d->file && d->file->isValid()) {
 
     d->file->seek(d->footerLocation);
-    d->footer.setData(d->file->readBlock(Footer::size()));
+    /*
+     * JBH NOTE: readin the Footer block (32bytes), parse the Footer block, construct a Footer, which contains
+     *           - version (1000 or 2000 for APE v1, APE v2)
+     *           - Tag size in bytes including footer and all tag items excluding the header --> tagSize == TagItemsSize+FooterSize
+     *           - Number of items in the Tag
+     *           - Global flags of all items (whether this Footer block is a Footer or Header, whether text encoded in UTF8)
+     *             (NOTE: each TagItem also has its own flag, which tells the item is a Text or Binary)
+     *
+     *           Footer --> gives the overall infos on tags embedded in an APE file, so must be resolved/parsed first.
+     */
+    d->footer.setData(d->file->readBlock(Footer::size())); //JBH: Footer::size() should be 32 bytes
 
     if(d->footer.tagSize() <= Footer::size() ||
        d->footer.tagSize() > static_cast<unsigned long>(d->file->length()))
       return;
 
+    /*
+     * JBH NOTE: now readin whole TagItems, and parse them.
+     */
     d->file->seek(d->footerLocation + Footer::size() - d->footer.tagSize());
+    // uint itemsLength = d->footer.tagSize() - Footer::size(); //JBH debug:
     parse(d->file->readBlock(d->footer.tagSize() - Footer::size()));
   }
 }
@@ -408,11 +438,21 @@ void APE::Tag::parse(const ByteVector &data)
 
   unsigned int pos = 0;
 
+  /*
+   * JBH NOTE: parse WHOLE TagItems one-by-one, which are contained in "data".
+   */
   for(unsigned int i = 0; i < d->footer.itemCount() && pos <= data.size() - 11; i++) {
 
     const int nullPos = data.find('\0', pos + 8);
     if(nullPos < 0) {
       debug("APE::Tag::parse() - Couldn't find a key/value separator. Stopped parsing.");
+//JBH ==========================================================================<
+  #ifdef _WIN32
+      debug("JBH: APE file: " + static_cast<FileName>(d->file->name()).toString()); //JBH add
+  #else
+      debug("JBH: APE file: " + String(d->file->name(), String::UTF8)); //JBH add
+  #endif
+//JBH ==========================================================================>
       return;
     }
 
@@ -430,6 +470,13 @@ void APE::Tag::parse(const ByteVector &data)
     }
     else {
       debug("APE::Tag::parse() - Skipped an item due to an invalid key.");
+//JBH ==========================================================================<
+  #ifdef _WIN32
+      debug("JBH: APE file: " + static_cast<FileName>(d->file->name()).toString()); //JBH add
+  #else
+      debug("JBH: APE file: " + String(d->file->name(), String::UTF8)); //JBH add
+  #endif
+//JBH ==========================================================================>
     }
 
     pos += keyLength + valLegnth + 9;

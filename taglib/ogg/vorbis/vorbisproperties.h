@@ -132,6 +132,13 @@ namespace TagLib {
        */
       int bitrateMinimum() const;
 
+//JBH ==========================================================================<
+      /*!
+       * Returns the bit width of audio sample.
+       */
+      virtual int bitwidth() const;
+//JBH ==========================================================================>
+
     private:
       Properties(const Properties &);
       Properties &operator=(const Properties &);

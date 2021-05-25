@@ -51,6 +51,22 @@ public:
 // public members
 ////////////////////////////////////////////////////////////////////////////////
 
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+SynchronizedLyricsFrame::SynchronizedLyricsFrame(String::Type encoding, std::string orgCharSet, float orgCharSetConfidence) :
+  Frame("SYLT", orgCharSet, orgCharSetConfidence),
+  d(new SynchronizedLyricsFramePrivate())
+{
+  d->textEncoding = encoding;
+}
+
+SynchronizedLyricsFrame::SynchronizedLyricsFrame(const ByteVector &data, std::string orgCharSet, float orgCharSetConfidence) :
+  Frame(data, orgCharSet, orgCharSetConfidence),
+  d(new SynchronizedLyricsFramePrivate())
+{
+  setData(data);
+}
+#else
 SynchronizedLyricsFrame::SynchronizedLyricsFrame(String::Type encoding) :
   Frame("SYLT"),
   d(new SynchronizedLyricsFramePrivate())
@@ -64,6 +80,8 @@ SynchronizedLyricsFrame::SynchronizedLyricsFrame(const ByteVector &data) :
 {
   setData(data);
 }
+#endif
+//JBH ==========================================================================>
 
 SynchronizedLyricsFrame::~SynchronizedLyricsFrame()
 {
@@ -109,6 +127,7 @@ SynchronizedLyricsFrame::synchedText() const
 
 void SynchronizedLyricsFrame::setTextEncoding(String::Type encoding)
 {
+  //JBH: possible enum values: {Latin1, UTF16, UTF16BE, UTF8, UTF16LE}
   d->textEncoding = encoding;
 }
 
@@ -150,6 +169,7 @@ void SynchronizedLyricsFrame::parseFields(const ByteVector &data)
     return;
   }
 
+  //JBH: The first byte of a field is always the encoding type in id3v2 by the spec?
   d->textEncoding = String::Type(data[0]);
   d->language = data.mid(1, 3);
   d->timestampFormat = TimestampFormat(data[4]);
@@ -234,9 +254,20 @@ ByteVector SynchronizedLyricsFrame::renderFields() const
 // private members
 ////////////////////////////////////////////////////////////////////////////////
 
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+SynchronizedLyricsFrame::SynchronizedLyricsFrame(const ByteVector &data, Header *h, std::string orgCharSet, float orgCharSetConfidence) :
+  Frame(h, orgCharSet, orgCharSetConfidence),
+  d(new SynchronizedLyricsFramePrivate())
+{
+  parseFields(fieldData(data));
+}
+#else
 SynchronizedLyricsFrame::SynchronizedLyricsFrame(const ByteVector &data, Header *h) :
   Frame(h),
   d(new SynchronizedLyricsFramePrivate())
 {
   parseFields(fieldData(data));
 }
+#endif
+//JBH ==========================================================================>

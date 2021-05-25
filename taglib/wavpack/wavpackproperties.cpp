@@ -124,6 +124,13 @@ int WavPack::Properties::bitsPerSample() const
   return d->bitsPerSample;
 }
 
+//JBH ==========================================================================<
+int WavPack::Properties::bitwidth() const //JBH
+{
+  return d->bitsPerSample;
+}
+//JBH ==========================================================================>
+
 bool WavPack::Properties::isLossless() const
 {
   return d->lossless;

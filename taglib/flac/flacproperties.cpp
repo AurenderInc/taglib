@@ -104,6 +104,13 @@ int FLAC::Properties::bitsPerSample() const
   return d->bitsPerSample;
 }
 
+//JBH ==========================================================================<
+int FLAC::Properties::bitwidth() const //JBH
+{
+  return d->bitsPerSample;
+}
+//JBH ==========================================================================>
+
 int FLAC::Properties::sampleWidth() const
 {
   return bitsPerSample();

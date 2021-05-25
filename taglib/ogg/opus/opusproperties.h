@@ -106,6 +106,13 @@ namespace TagLib {
          */
         virtual int channels() const;
 
+//JBH ==========================================================================<
+        /*!
+         * Returns the bit width of audio sample.
+         */
+        virtual int bitwidth() const;
+//JBH ==========================================================================>
+
         /*!
          * The Opus codec supports decoding at multiple sample rates, there is no
          * single sample rate of the encoded stream. This returns the sample rate

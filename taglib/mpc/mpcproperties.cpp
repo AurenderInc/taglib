@@ -124,6 +124,13 @@ int MPC::Properties::channels() const
   return d->channels;
 }
 
+//JBH ==========================================================================<
+int MPC::Properties::bitwidth() const //JBH
+{
+  return 0;
+}
+//JBH ==========================================================================>
+
 int MPC::Properties::mpcVersion() const
 {
   return d->version;

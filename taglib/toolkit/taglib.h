@@ -32,6 +32,82 @@
 #define TAGLIB_MINOR_VERSION 11
 #define TAGLIB_PATCH_VERSION 1
 
+//JBH ==========================================================================<
+#define TAGLIB_JBH_VERSION "19.1212.0"
+//18.0716.0: tagreader -v prints the JBH version number
+//18.0722.0: RIFF: allow wrong data size
+//18.1106.0: RIFF: increased the LIST chunk limit to 10K (Some wav files ripped by ACSRipper have a size of 9730)
+//18.1113.0: RIFF: do not check validness of the chunk name, to allow "null" chunk name
+//19.0110.0: MP4(M4A): do not take 0-length block to Atoms
+//19.0203.0: RIFF: support/allow/read Over-4GB file, but read the audio property only, not the tags
+//19.0206.0: add the Embedded Unicode Encoding feature
+//19.0210.0: Embedded Unicode Encoding feature is working, merged to the main branch.
+//19.0216.0: Embedded Unicode Encoding feature --> official release.
+//19.0223.0: ON/OFF option to Smart Language Encoding --> "/srv/widealab/smartLangEncode"
+//19.0419.0: Support dsf/dsdiff  512 for Aurender W20SE
+//19.0502.0: Support dsf/dsdiff 1024 for Aurender W20SE
+//19.0806.0: Comments on flacfile.cpp
+//19.0808.0: flac: allow 0-length blocks only up to 10
+//19.1212.0: add pinyin4cpp (pinyin4cpp is not related with taglib (and no change in taglib itself), but let's mark taglib here to denote the Deps version up)
+//JBH ==========================================================================>
+
+
+/*
+ *===============================================================================
+ *JBH: TagLib limits:
+ *  32bit Linux:
+ *   std::numeric_limits<int>::max():          4bytes  2147483647
+ *   std::numeric_limits<unsigned int>::max(): 4bytes  4294967295
+ *   std::numeric_limits<int64_t>::max():      8bytes  9223372036854775807
+ *   std::numeric_limits<uint64_t>::max():     8bytes  18446744073709551615
+ *   std::numeric_limits<long>::max():         4bytes  2147483647
+ *   std::numeric_limits<unsigned long>::max():4bytes  4294967295
+ *   std::numeric_limits<size_t>::max():       4bytes  4294967295
+ *
+ *  64bit Linux:
+ *   std::numeric_limits<int>::max():          4bytes  2147483647
+ *   std::numeric_limits<unsigned int>::max(): 4bytes  4294967295
+ *   std::numeric_limits<int64_t>::max():      8bytes  9223372036854775807
+ *   std::numeric_limits<uint64_t>::max():     8bytes  18446744073709551615
+ *   std::numeric_limits<long>::max():         8bytes  9223372036854775807
+ *   std::numeric_limits<unsigned long>::max():8bytes  18446744073709551615
+ *   std::numeric_limits<size_t>::max():       8bytes  18446744073709551615
+ *
+ *   So,
+ *   Use ideally "uint64_t" for "size", "file length", "offset"
+ *   However, TagLib uses ultimately "fread()" in linux, which returns "size_t"
+ *   Using "uint64_t" is meaningless, unless the fread() in linux support the expanded size_t via the LARGE_FILE_SUPPORT feature
+ *===============================================================================
+ */
+
+ /*
+  * JBH: Size Limit of RIFF (WAVE, AIFF) by the "SPEC"
+  *
+  *========================================================================================================
+  * The max size of AIFF is 4GB by the AIFF "spec".
+  * Do not try reading over 4GB aiff files!!
+  *
+  * The max size of WAVE is 4GB by the WAV "spec".
+  * Do not try reading over 4GB wav files!!
+  *
+  *
+  * Limitations: https://en.wikipedia.org/wiki/WAV
+  * The WAV format is limited to files that are less than 4 GB,
+  * because of its use of a 32-bit unsigned integer to record the file size header (some programs limit the file size to 2 GB).
+  * 
+  * The W64 format was therefore created for use in Sound Forge. Its 64-bit header allows for much longer recording times.
+  * The RF64 (https://en.wikipedia.org/wiki/RF64) format specified by the European Broadcasting Union has also been created to solve this problem.
+  *
+  *========================================================================================================
+  */
+
+//JBH <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+#define CHARSETDETECTOR_CONFIDENCE_THRESHOLD 0.5         //JBH add
+#define CHARSETCONVERTER_TO_CHARSET          "UTF-16BE"  //JBH add
+#endif
+//JBH >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
 #if defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ > 1)) || defined(__clang__)
 #define TAGLIB_IGNORE_MISSING_DESTRUCTOR _Pragma("GCC diagnostic ignored \"-Wnon-virtual-dtor\"")
 #else

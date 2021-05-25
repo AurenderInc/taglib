@@ -31,6 +31,13 @@
 #include "commentsframe.h"
 #include "tpropertymap.h"
 
+//JBH <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+#include "charsetdetector.h"
+#include "charsetconverter.h"
+#endif
+//JBH >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
 using namespace TagLib;
 using namespace ID3v2;
 
@@ -48,6 +55,22 @@ public:
 // public members
 ////////////////////////////////////////////////////////////////////////////////
 
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+CommentsFrame::CommentsFrame(String::Type encoding, std::string orgCharSet, float orgCharSetConfidence) :
+  Frame("COMM", orgCharSet, orgCharSetConfidence),
+  d(new CommentsFramePrivate())
+{
+  d->textEncoding = encoding;
+}
+
+CommentsFrame::CommentsFrame(const ByteVector &data, std::string orgCharSet, float orgCharSetConfidence) :
+  Frame(data, orgCharSet, orgCharSetConfidence),
+  d(new CommentsFramePrivate())
+{
+  setData(data);
+}
+#else
 CommentsFrame::CommentsFrame(String::Type encoding) :
   Frame("COMM"),
   d(new CommentsFramePrivate())
@@ -61,6 +84,7 @@ CommentsFrame::CommentsFrame(const ByteVector &data) :
 {
   setData(data);
 }
+#endif
 
 CommentsFrame::~CommentsFrame()
 {
@@ -109,6 +133,7 @@ String::Type CommentsFrame::textEncoding() const
 
 void CommentsFrame::setTextEncoding(String::Type encoding)
 {
+  //JBH: possible enum values: {Latin1, UTF16, UTF16BE, UTF8, UTF16LE}
   d->textEncoding = encoding;
 }
 
@@ -150,6 +175,7 @@ void CommentsFrame::parseFields(const ByteVector &data)
     return;
   }
 
+  //JBH: The first byte of a field is always the encoding type in id3v2 by the spec?
   d->textEncoding = String::Type(data[0]);
   d->language = data.mid(1, 3);
 
@@ -159,8 +185,65 @@ void CommentsFrame::parseFields(const ByteVector &data)
 
   if(l.size() == 2) {
     if(d->textEncoding == String::Latin1) {
+//JBH <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+      int res;
+      std::string charset;
+      float confidence;
+      String encoded_string;
+
+      //confidence = CHARSETDETECTOR::detectCharSet(data, charset);
+      //confidence = CHARSETDETECTOR::detectCharSet(l.front(), charset);
+      charset    = getOrgCharSet();
+      confidence = getOrgCharSetConfidence();
+
+      if ( (confidence > CHARSETDETECTOR_CONFIDENCE_THRESHOLD) && (charset != "UNDETECTED") && (charset != "UNKNOWN") && (charset != "NOUSE") && (charset != "ASCII") && (charset != "WINDOWS-1252") && (charset != "UTF-8") )
+      {
+        res = CHARSETCONVERTER::encodeByteVectorToUTF16(l.front(), encoded_string, charset, CHARSETCONVERTER_TO_CHARSET);
+        if (res ==0)
+        {
+          d->description = encoded_string;
+        }
+        else
+        {
+          //fallback upon failure
+          d->description = Tag::latin1StringHandler()->parse(l.front());
+        }
+      }
+      else
+      {
+        d->description = Tag::latin1StringHandler()->parse(l.front());
+      }
+
+      //confidence = CHARSETDETECTOR::detectCharSet(l.back(), charset);
+      if ( (confidence > CHARSETDETECTOR_CONFIDENCE_THRESHOLD) && (charset != "UNDETECTED") && (charset != "UNKNOWN") && (charset != "NOUSE") && (charset != "ASCII") && (charset != "WINDOWS-1252") && (charset != "UTF-8") )
+      {
+        res = CHARSETCONVERTER::encodeByteVectorToUTF16(l.back(), encoded_string, charset, CHARSETCONVERTER_TO_CHARSET);
+        if (res ==0)
+        {
+          d->text = encoded_string;
+        }
+        else
+        {
+          //fallback upon failure
+          d->text = Tag::latin1StringHandler()->parse(l.back());
+        }
+      }
+      else
+      {
+        d->text = Tag::latin1StringHandler()->parse(l.back());
+      }
+#else
+      /*
+       * JBH: callback the client-side-defined unicode encoder, if registered at the init stage of TagLib.
+       *      EX: at taglibfile.cpp@kid3, TagLib::ID3v2::Tag::setLatin1StringHandler(m_textCodecStringHandlerForID3v2); //JBH: register our own unicode encoder to TagLib, so that TagLib will call back.
+       *
+       * JBH: All "Non-Unicode" strings, such as EUC-KR and real Latin1, are marked "Latin1" in taglib.
+       */
       d->description = Tag::latin1StringHandler()->parse(l.front());
       d->text = Tag::latin1StringHandler()->parse(l.back());
+#endif
+//JBH >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>        
     } else {
       d->description = String(l.front(), d->textEncoding);
       d->text = String(l.back(), d->textEncoding);
@@ -190,9 +273,20 @@ ByteVector CommentsFrame::renderFields() const
 // private members
 ////////////////////////////////////////////////////////////////////////////////
 
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+CommentsFrame::CommentsFrame(const ByteVector &data, Header *h, std::string orgCharSet, float orgCharSetConfidence) :
+  Frame(h, orgCharSet, orgCharSetConfidence),
+  d(new CommentsFramePrivate())
+{
+  parseFields(fieldData(data));
+}
+#else
 CommentsFrame::CommentsFrame(const ByteVector &data, Header *h) :
   Frame(h),
   d(new CommentsFramePrivate())
 {
   parseFields(fieldData(data));
 }
+#endif
+//JBH ==========================================================================>

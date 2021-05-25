@@ -198,6 +198,9 @@ if(NOT ZLIB_SOURCE)
     set(HAVE_ZLIB 0)
   endif()
 endif()
+message("JBH: ZLIB_INCLUDE_DIR:  " ${ZLIB_INCLUDE_DIR})
+message("JBH: ZLIB_INCLUDE_DIRS: " ${ZLIB_INCLUDE_DIRS})
+message("JBH: ZLIB_LIBRARIES:    " ${ZLIB_LIBRARIES})
 
 # Determine whether CppUnit is installed.
 

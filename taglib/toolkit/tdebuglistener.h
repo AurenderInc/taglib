@@ -26,6 +26,10 @@
 #ifndef TAGLIB_DEBUGLISTENER_H
 #define TAGLIB_DEBUGLISTENER_H
 
+#ifdef _WIN32
+#include <Windows.h> //for WideCharToMultiByte CP_ACP
+#endif
+
 #include "taglib_export.h"
 #include "tstring.h"
 
@@ -57,6 +61,29 @@ namespace TagLib
     DebugListener(const DebugListener &);
     DebugListener &operator=(const DebugListener &);
   };
+
+//JBH ==========================================================================<
+  class StdoutListener : public DebugListener
+  {
+  public:
+    virtual void printMessage(const String &msg)
+    {
+    #ifdef _WIN32
+      const wstring wstr = msg.toWString();
+      //JBH: CP_ACP:  The system default Windows ANSI code page.
+      //     CP_UTF8: UTF-8. With this value set, lpDefaultChar and lpUsedDefaultChar must be set to NULL.
+      const int len = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, NULL, 0, NULL, NULL);
+      if(len != 0) {
+        std::vector<char> buf(len);
+        WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, &buf[0], len, NULL, NULL);
+        std::cerr << std::string(&buf[0]) << std::endl;
+      }
+    #else
+      std::cerr << msg.toCString(true /*encode to UTF-8*/) << std::endl;
+    #endif 
+    }
+  };
+//JBH ==========================================================================>
 
   /*!
    * Sets the listener that decides how the debug messages are redirected.

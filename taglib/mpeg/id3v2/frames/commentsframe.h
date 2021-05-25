@@ -28,6 +28,7 @@
 
 #include "id3v2frame.h"
 #include "taglib_export.h"
+#include "taglib_config.h" //JBH: for JBH_USE_EMBEDDED_UNICODE_ENCODER
 
 namespace TagLib {
 
@@ -49,12 +50,24 @@ namespace TagLib {
        * Construct an empty comment frame that will use the text encoding
        * \a encoding.
        */
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+      explicit CommentsFrame(String::Type encoding = String::Latin1, std::string orgCharSet="UNKNOWN", float orgCharSetConfidence=0.0);
+#else
       explicit CommentsFrame(String::Type encoding = String::Latin1);
+#endif
+//JBH ==========================================================================>
 
       /*!
        * Construct a comment based on the data in \a data.
        */
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+      explicit CommentsFrame(const ByteVector &data, std::string orgCharSet="UNKNOWN", float orgCharSetConfidence=0.0);
+#else
       explicit CommentsFrame(const ByteVector &data);
+#endif
+//JBH ==========================================================================>
 
       /*!
        * Destroys this CommentFrame instance.
@@ -166,7 +179,13 @@ namespace TagLib {
       /*!
        * The constructor used by the FrameFactory.
        */
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+      CommentsFrame(const ByteVector &data, Header *h, std::string orgCharSet="UNKNOWN", float orgCharSetConfidence=0.0);
+#else
       CommentsFrame(const ByteVector &data, Header *h);
+#endif
+//JBH ==========================================================================>
       CommentsFrame(const CommentsFrame &);
       CommentsFrame &operator=(const CommentsFrame &);
 

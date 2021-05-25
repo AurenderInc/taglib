@@ -99,6 +99,13 @@ int XM::Properties::channels() const
   return d->channels;
 }
 
+//JBH ==========================================================================<
+int XM::Properties::bitwidth() const //JBH
+{
+  return 0;
+}
+//JBH ==========================================================================>
+
 unsigned short XM::Properties::lengthInPatterns() const
 {
   return d->lengthInPatterns;

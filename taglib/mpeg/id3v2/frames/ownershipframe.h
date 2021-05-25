@@ -28,6 +28,7 @@
 
 #include "id3v2frame.h"
 #include "taglib_export.h"
+#include "taglib_config.h" //JBH: for JBH_USE_EMBEDDED_UNICODE_ENCODER
 
 namespace TagLib {
 
@@ -48,12 +49,24 @@ namespace TagLib {
       /*!
        * Construct an empty ownership frame.
        */
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+      explicit OwnershipFrame(String::Type encoding = String::Latin1, std::string orgCharSet="UNKNOWN", float orgCharSetConfidence=0.0);
+#else
       explicit OwnershipFrame(String::Type encoding = String::Latin1);
+#endif
+//JBH ==========================================================================>
 
       /*!
        * Construct a ownership based on the data in \a data.
        */
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+      explicit OwnershipFrame(const ByteVector &data, std::string orgCharSet="UNKNOWN", float orgCharSetConfidence=0.0);
+#else
       explicit OwnershipFrame(const ByteVector &data);
+#endif
+//JBH ==========================================================================>
 
       /*!
        * Destroys this OwnershipFrame instance.
@@ -138,7 +151,13 @@ namespace TagLib {
       /*!
        * The constructor used by the FrameFactory.
        */
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+      OwnershipFrame(const ByteVector &data, Header *h, std::string orgCharSet="UNKNOWN", float orgCharSetConfidence=0.0);
+#else
       OwnershipFrame(const ByteVector &data, Header *h);
+#endif
+//JBH ==========================================================================>
       OwnershipFrame(const OwnershipFrame &);
       OwnershipFrame &operator=(const OwnershipFrame &);
 

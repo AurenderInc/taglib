@@ -98,6 +98,13 @@ namespace TagLib {
        */
       virtual unsigned int track() const;
 
+//JBH ==========================================================================<
+      /*!
+       * Returns the file guid.
+       */
+      virtual String guid() const; //JBH added
+//JBH ==========================================================================>
+
       /*!
        * Sets the title to \a s.
        */

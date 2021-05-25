@@ -34,6 +34,9 @@
 # include <unistd.h>
 #endif
 
+//#define JBH_DEBUG_TAGLIB_OPENCLOSE
+//#define JBH_DEBUG_FILESTREAM_OPENCLOSE
+
 using namespace TagLib;
 
 namespace
@@ -49,6 +52,12 @@ namespace
 
   FileHandle openFile(const FileName &path, bool readOnly)
   {
+//JBH ==========================================================================<
+#ifdef JBH_DEBUG_TAGLIB_OPENCLOSE_FILEHANDLE
+    debug("openFile() called");
+#endif
+//JBH ==========================================================================>
+
     const DWORD access = readOnly ? GENERIC_READ : (GENERIC_READ | GENERIC_WRITE);
 
 #if defined (PLATFORM_WINRT)
@@ -60,6 +69,11 @@ namespace
 
   void closeFile(FileHandle file)
   {
+//JBH ==========================================================================<
+#ifdef JBH_DEBUG_TAGLIB_OPENCLOSE_FILEHANDLE
+    debug("closeFile() called");
+#endif
+//JBH ==========================================================================>
     CloseHandle(file);
   }
 
@@ -95,16 +109,29 @@ namespace
 
   FileHandle openFile(const FileName &path, bool readOnly)
   {
+//JBH ==========================================================================<
+#ifdef JBH_DEBUG_TAGLIB_OPENCLOSE_FILEHANDLE
+    debug("openFile() called");
+#endif
+//JBH ==========================================================================>
+
     return fopen(path, readOnly ? "rb" : "rb+");
   }
 
   void closeFile(FileHandle file)
   {
+//JBH ==========================================================================<
+#ifdef JBH_DEBUG_TAGLIB_OPENCLOSE_FILEHANDLE
+    debug("closeFile() called");
+#endif
+//JBH ==========================================================================>
     fclose(file);
   }
 
   size_t readFile(FileHandle file, ByteVector &buffer)
   {
+    //JBH: fread returns "size_t", so TagLib is limited by the size of size_t on a platform (32bit, 64bit linux)
+    //     On a 32 bit linux, the max size is limited to 4GB.
     return fread(buffer.data(), sizeof(char), buffer.size(), file);
   }
 
@@ -138,6 +165,16 @@ public:
 FileStream::FileStream(FileName fileName, bool openReadOnly)
   : d(new FileStreamPrivate(fileName))
 {
+//JBH ==========================================================================<
+#ifdef JBH_DEBUG_FILESTREAM_OPENCLOSE
+  #ifdef _WIN32
+    debug("FileStream Constructor:" + fileName.toString());
+  #else
+    debug("FileStream Constructor:" + String(static_cast<const char *>(d->name)));
+  #endif
+#endif
+//JBH ==========================================================================>
+
   // First try with read / write mode, if that fails, fall back to read only.
 
   if(!openReadOnly)
@@ -160,6 +197,17 @@ FileStream::FileStream(FileName fileName, bool openReadOnly)
 
 FileStream::~FileStream()
 {
+//JBH ==========================================================================<
+#ifdef JBH_DEBUG_FILESTREAM_OPENCLOSE
+  #ifdef _WIN32
+    debug("FileStream Destructor:" + d->file->fileName.toString());
+  #else
+    //debug("FileStream Destructor:" + String(static_cast<const char *>(d->name)));
+    debug("FileStream Destructor:" + String(static_cast<const char *>(d->file->name)));
+  #endif
+#endif
+//JBH ==========================================================================>
+
   if(isOpen())
     closeFile(d->file);
 
@@ -187,6 +235,57 @@ ByteVector FileStream::readBlock(unsigned long length)
 
   ByteVector buffer(static_cast<unsigned int>(length));
 
+  /*
+   * JBH: Size Limit of RIFF (WAVE, AIFF) by the "SPEC"
+   *
+   *========================================================================================================
+   * The max size of AIFF is 4GB by the AIFF "spec".
+   * Do not try reading over 4GB aiff files!!
+   *
+   * The max size of WAVE is 4GB by the WAV "spec".
+   * Do not try reading over 4GB wav files!!
+   *
+   *
+   * Limitations: https://en.wikipedia.org/wiki/WAV
+   * The WAV format is limited to files that are less than 4 GB,
+   * because of its use of a 32-bit unsigned integer to record the file size header (some programs limit the file size to 2 GB).
+   * 
+   * The W64 format was therefore created for use in Sound Forge. Its 64-bit header allows for much longer recording times.
+   * The RF64 (https://en.wikipedia.org/wiki/RF64) format specified by the European Broadcasting Union has also been created to solve this problem.
+   *
+   *========================================================================================================
+   */
+
+  /*
+   *===============================================================================
+   *JBH: TagLib limits:
+   *  32bit Linux:
+   *   std::numeric_limits<int>::max():          4bytes  2147483647
+   *   std::numeric_limits<unsigned int>::max(): 4bytes  4294967295
+   *   std::numeric_limits<int64_t>::max():      8bytes  9223372036854775807
+   *   std::numeric_limits<uint64_t>::max():     8bytes  18446744073709551615
+   *   std::numeric_limits<long>::max():         4bytes  2147483647
+   *   std::numeric_limits<unsigned long>::max():4bytes  4294967295
+   *   std::numeric_limits<size_t>::max():       4bytes  4294967295
+   *
+   *  64bit Linux:
+   *   std::numeric_limits<int>::max():          4bytes  2147483647
+   *   std::numeric_limits<unsigned int>::max(): 4bytes  4294967295
+   *   std::numeric_limits<int64_t>::max():      8bytes  9223372036854775807
+   *   std::numeric_limits<uint64_t>::max():     8bytes  18446744073709551615
+   *   std::numeric_limits<long>::max():         8bytes  9223372036854775807
+   *   std::numeric_limits<unsigned long>::max():8bytes  18446744073709551615
+   *   std::numeric_limits<size_t>::max():       8bytes  18446744073709551615
+   *
+   *   So,
+   *   Use ideally "uint64_t" for "size", "file length", "offset"
+   *   However, TagLib uses ultimately "fread()" in linux, which returns "size_t"
+   *   Using "uint64_t" is meaningless, unless the fread() in linux support the expanded size_t via the LARGE_FILE_SUPPORT feature
+   *===============================================================================
+   */
+
+  //JBH: readFile calls fread(), which returns "size_t", so TagLib is limited by the size of size_t on a platform (32bit, 64bit linux)
+  //     On a 32 bit linux, the max size is limited to 4GB.
   const size_t count = readFile(d->file, buffer);
   buffer.resize(static_cast<unsigned int>(count));
 

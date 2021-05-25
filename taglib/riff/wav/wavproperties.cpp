@@ -125,6 +125,13 @@ int RIFF::WAV::Properties::bitsPerSample() const
   return d->bitsPerSample;
 }
 
+//JBH ==========================================================================<
+int RIFF::WAV::Properties::bitwidth() const //JBH
+{
+  return d->bitsPerSample;
+}
+//JBH ==========================================================================>
+
 int RIFF::WAV::Properties::sampleWidth() const
 {
   return bitsPerSample();
@@ -155,47 +162,105 @@ void RIFF::WAV::Properties::read(File *file)
     if(name == "fmt ") {
       if(data.isEmpty())
         data = file->chunkData(i);
-      else
+      else {
         debug("RIFF::WAV::Properties::read() - Duplicate 'fmt ' chunk found.");
+//JBH ==========================================================================<
+  #ifdef _WIN32
+        debug("JBH: WAV file: " + static_cast<FileName>(file->name()).toString()); //JBH add
+  #else
+        debug("JBH: WAV file: " + String(file->name(), String::UTF8)); //JBH add
+  #endif
+//JBH ==========================================================================>
+      }
     }
     else if(name == "data") {
       if(streamLength == 0)
         streamLength = file->chunkDataSize(i) + file->chunkPadding(i);
-      else
+      else {
         debug("RIFF::WAV::Properties::read() - Duplicate 'data' chunk found.");
+//JBH ==========================================================================<
+  #ifdef _WIN32
+        debug("JBH: WAV file: " + static_cast<FileName>(file->name()).toString()); //JBH add
+  #else
+        debug("JBH: WAV file: " + String(file->name(), String::UTF8)); //JBH add
+  #endif
+//JBH ==========================================================================>
+      }
     }
     else if(name == "fact") {
       if(totalSamples == 0)
         totalSamples = file->chunkData(i).toUInt(0, false);
-      else
+      else {
         debug("RIFF::WAV::Properties::read() - Duplicate 'fact' chunk found.");
+//JBH ==========================================================================<
+  #ifdef _WIN32
+        debug("JBH: WAV file: " + static_cast<FileName>(file->name()).toString()); //JBH add
+  #else
+        debug("JBH: WAV file: " + String(file->name(), String::UTF8)); //JBH add
+  #endif
+//JBH ==========================================================================>
+      }
     }
   }
 
   if(data.size() < 16) {
     debug("RIFF::WAV::Properties::read() - 'fmt ' chunk not found or too short.");
+//JBH ==========================================================================<
+  #ifdef _WIN32
+    debug("JBH: WAV file: " + static_cast<FileName>(file->name()).toString()); //JBH add
+  #else
+    debug("JBH: WAV file: " + String(file->name(), String::UTF8)); //JBH add
+  #endif
+//JBH ==========================================================================>
     return;
   }
 
   if(streamLength == 0) {
     debug("RIFF::WAV::Properties::read() - 'data' chunk not found.");
+//JBH ==========================================================================<
+  #ifdef _WIN32
+    debug("JBH: WAV file: " + static_cast<FileName>(file->name()).toString()); //JBH add
+  #else
+    debug("JBH: WAV file: " + String(file->name(), String::UTF8)); //JBH add
+  #endif
+//JBH ==========================================================================>
     return;
   }
 
+#define JBH_DO_NOT_CHECK_FORMAT_PCM
   d->format = data.toShort(0, false);
   if(d->format != FORMAT_PCM && totalSamples == 0) {
     debug("RIFF::WAV::Properties::read() - Non-PCM format, but 'fact' chunk not found.");
-    return;
+//JBH ==========================================================================<
+  #ifdef _WIN32
+    debug("JBH: WAV file: " + static_cast<FileName>(file->name()).toString()); //JBH add
+  #else
+    debug("JBH: WAV file: " + String(file->name(), String::UTF8)); //JBH add
+  #endif
+//JBH ==========================================================================>
+#ifdef JBH_DO_NOT_CHECK_FORMAT_PCM
+    //JBH FIXME  return;
+    //JBH FIXME: do not treat it malformed, just warn.
+    //Dubby's file: /hdds/Music1/24/HDtracks/Amy Winehouse - Back To Black  - Universal 2006 [HFPA]/10 - He Can Only Hold Her.wav
+    //  d->format != FORMAT_PCM
+#else
+    return; //JBH: treat it malformed
+#endif
   }
 
   d->channels      = data.toShort(2, false);
   d->sampleRate    = data.toUInt(4, false);
   d->bitsPerSample = data.toShort(14, false);
 
+#ifdef JBH_DO_NOT_CHECK_FORMAT_PCM
+  if(d->channels > 0 && d->bitsPerSample > 0)
+    d->sampleFrames = streamLength / (d->channels * ((d->bitsPerSample + 7) / 8));
+#else
   if(d->format != FORMAT_PCM)
     d->sampleFrames = totalSamples;
   else if(d->channels > 0 && d->bitsPerSample > 0)
     d->sampleFrames = streamLength / (d->channels * ((d->bitsPerSample + 7) / 8));
+#endif
 
   if(d->sampleFrames > 0 && d->sampleRate > 0) {
     const double length = d->sampleFrames * 1000.0 / d->sampleRate;

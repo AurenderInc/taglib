@@ -24,6 +24,8 @@
  ***************************************************************************/
 
 #include <algorithm>
+#include <iostream> //JBH: float_toStdString
+#include <sstream>  //JBH: float_toStdString
 
 #include <tfile.h>
 #include <tbytevector.h>
@@ -43,6 +45,13 @@
 #include "frames/uniquefileidentifierframe.h"
 #include "frames/unsynchronizedlyricsframe.h"
 #include "frames/unknownframe.h"
+
+//JBH <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+#include "charsetdetector.h"
+#include "smartencodingoptionchecker.h"
+#endif
+//JBH >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 using namespace TagLib;
 using namespace ID3v2;
@@ -94,6 +103,21 @@ public:
 
 Latin1StringHandler::Latin1StringHandler()
 {
+  /*
+   *JBH: ID3v2 has defined only 3 Encoding:  Latin1(ISO-8859-1), UTF8, UTF16, while
+   *     ID3v1 has defined all    Encodings: Big5, EUC-KR, EUC-JP, KSC5601, ..., Latin1, UTF8.
+   *
+   *     ID2v2 encodes/treats non-unicode as Latin1, and Latin1StringHandler is the default Latin1 encoder.
+   *     App can set/change the default Latin1 encoder by calling ID3v2::Tag::setLatin1StringHandler().
+   *
+   *     We may implement/set our own Latin1 encoder, which will encode non-unicode text into a certain language such EUC-KR.
+   *     CAVEAT: The "key"   of ID3v2 frame should be "Latin1" by the spec,
+   *             The "value" of ID3v2 frame could  be non-Latin1, such as EUC-KR.
+   *             Latin1StringHandler is used for "key". Henceforce Latin1StringHandler should remain unmodified?
+   *
+   *     Kid3 implements a Latin1 encoder/handler, but does not set/call ID3v2::Tag::setLatin1StringHandler() though.
+   *     Kid3 uses it externally (to TagLib). Kid3 just adopt the technique. Refer to comments at Kid3.
+   */
 }
 
 Latin1StringHandler::~Latin1StringHandler()
@@ -102,6 +126,9 @@ Latin1StringHandler::~Latin1StringHandler()
 
 String Latin1StringHandler::parse(const ByteVector &data) const
 {
+  //JBH: "parse" here means "text encoding".
+  //JBH: "parse" here is a fucking name. it could be confused with TagLib::ID3v2::Tag::parse().
+  //JBH: Name it something like "encodeText"
   return String(data, String::Latin1);
 }
 
@@ -227,6 +254,37 @@ unsigned int ID3v2::Tag::track() const
     return d->frameListMap["TRCK"].front()->toString().toInt();
   return 0;
 }
+
+//JBH ==========================================================================<
+//JBH: Aurender extension to support waki
+String ID3v2::Tag::waki() const
+{
+  if(!d->frameListMap["WAKI"].isEmpty())
+    return d->frameListMap["WAKI"].front()->toString();
+  return String::null;
+}
+//JBH ==========================================================================>
+
+//JBH ==========================================================================<
+//JBH: Aurender extension to support the file guid
+String ID3v2::Tag::guid() const
+{
+  const FrameList &txxxFrameList = d->frameListMap["TXXX"];
+
+  if(txxxFrameList.isEmpty())
+    return String::null;
+
+  for(FrameList::ConstIterator it = txxxFrameList.begin(); it != txxxFrameList.end(); ++it)
+  {
+    UserTextIdentificationFrame *frame = dynamic_cast<UserTextIdentificationFrame *>(*it);
+
+    if(frame && frame->description()=="GUID")
+      return (*it)->toString();
+  }
+
+  return String::null;
+}
+//JBH ==========================================================================>
 
 void ID3v2::Tag::setTitle(const String &s)
 {
@@ -657,11 +715,43 @@ Latin1StringHandler const *ID3v2::Tag::latin1StringHandler()
 
 void ID3v2::Tag::setLatin1StringHandler(const Latin1StringHandler *handler)
 {
+  /*
+   * JBH: This "setLatin1StringHandler()" can be called from a client of the taglib.
+   *      Taglib will callback the client-side-defined "handler", to give the client a chance to text-encode.
+   *      NOTE: This is only for ID3 V2, not V1. (For V1, refer to ID3v1::Tag::setStringHandler())
+   *
+   * JBH: All "Non-Unicode" strings, such as EUC-KR and real Latin1, are marked "Latin1" in taglib.
+   */
   if(handler)
     stringHandler = handler;
   else
     stringHandler = &defaultStringHandler;
 }
+
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+void ID3v2::Tag::setOrgCharSet(std::string orgCharSet)
+{
+  _orgCharSet = orgCharSet;
+}
+
+std::string ID3v2::Tag::getOrgCharSet()
+{
+  return _orgCharSet;
+}
+
+void  ID3v2::Tag::setOrgCharSetConfidence(float orgCharSetConfidence)
+{
+  _orgCharSetConfidence = orgCharSetConfidence;
+}
+
+float ID3v2::Tag::getOrgCharSetConfidence()
+{
+  return _orgCharSetConfidence;
+}
+#endif
+//JBH ==========================================================================>
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // protected members
@@ -677,6 +767,16 @@ void ID3v2::Tag::read()
 
   d->file->seek(d->tagOffset);
   d->header.setData(d->file->readBlock(Header::size()));
+  /*
+   *JBH: d->header:
+   *     majorVersion            3
+   *     revisionNumber          0
+   *     unsynchronisation       false
+   *     extendedHeader          false
+   *     experimentalIndicator   false
+   *     footerPresent           false
+   *     tagSize                 272226
+   */
 
   // If the tag size is 0, then this is an invalid tag (tags must contain at
   // least one frame)
@@ -709,14 +809,87 @@ void ID3v2::Tag::read()
   }
 }
 
+//JBH <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+template < typename Type > std::string float_toStdString (const Type & t)
+{
+  std::ostringstream os;
+  os << t;
+  return os.str ();
+}
+//JBH >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
 void ID3v2::Tag::parse(const ByteVector &origData)
 {
   ByteVector data = origData;
 
+//JBH <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+  /*
+   *JBH: detect/determin the charset for the tag
+   */
+  std::string charSet;
+  float confidence;
+  if ( SmartEncodingOptionChecker::instance()->enabled() ) // depends on "/srv/widealab/smartLangEncode", "/srv/widealab/noSmartLangEncode"
+  {
+    /*
+     *JBH: Do not use(include) the picture data, because it is not relevant and causes a slow down of the speed.
+     *     Note: We assumes that the APIC frame comes at the later (almost last) section of the tag data.
+     *           We assumes that the frames after APIC are not critical for the charset detection.
+     */
+    int apic_offset = data.find("APIC");
+    if (apic_offset > 0)
+    {
+      //exclude the picture data (APIC frame) and frames thereafter.
+      ByteVector text_only(data, 0, apic_offset);
+      confidence = CHARSETDETECTOR::detectCharSet(text_only, charSet);
+    }
+    else
+    {
+      //The tag does not contain APIC, so use the whole data
+      confidence = CHARSETDETECTOR::detectCharSet(data, charSet);
+    }
+
+    if (charSet.empty())
+    {
+      charSet = "UNDETECTED";
+      confidence = 0.0;
+    }
+  }
+  else
+  {
+    //not use the "Smart Language Encoding" feature.
+    charSet = "NOUSE";
+    confidence = 0.0;
+  }
+
+  //debug <
+  if ( (confidence > CHARSETDETECTOR_CONFIDENCE_THRESHOLD) && (charSet != "UNDETECTED") && (charSet != "UNKNOWN") && (charSet != "NOUSE") && (charSet != "ASCII") && (charSet != "WINDOWS-1252") && (charSet != "UTF-8") )
+  {
+    std::string debug_msg = "CharSet==" + charSet + "  Confidence==" + float_toStdString(confidence);
+    debug("[ID3v2::Tag::parse]" + String(debug_msg));
+  }
+  //debug >
+
+  setOrgCharSet(charSet);
+  setOrgCharSetConfidence(confidence);
+#endif
+//JBH >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+  /*
+   *JBH: d->header:
+   *     majorVersion            3
+   *     revisionNumber          0
+   *     unsynchronisation       false
+   *     extendedHeader          false
+   *     experimentalIndicator   false
+   *     footerPresent           false
+   *     tagSize                 272226
+   */
   if(d->header.unsynchronisation() && d->header.majorVersion() <= 3)
     data = SynchData::decode(data);
 
   unsigned int frameDataPosition = 0;
+  //JBH: frameDataLength --> 272226
   unsigned int frameDataLength = data.size();
 
   // check for extended header
@@ -750,17 +923,56 @@ void ID3v2::Tag::parse(const ByteVector &origData)
 
     if(data.at(frameDataPosition) == 0) {
       if(d->header.footerPresent()) {
-        debug("Padding *and* a footer found.  This is not allowed by the spec.");
+        debug("ID3v2: Padding *and* a footer found.  This is not allowed by the spec."); //JBH add "ID3v2: "
       }
 
       break;
     }
 
+    /*
+     *JBH: from id3v2frame.h
+     *  In ID3v2, a tag is
+     *  split between a collection of frames (which are in turn split into fields
+     *  (Structure, <a href="id3v2-structure.html#4">4</a>)
+     *  (<a href="id3v2-frames.html">Frames</a>).  This class provides an API for
+     *  gathering information about and modifying ID3v2 frames.  Funtionallity
+     *  specific to a given frame type is handed in one of the many subclasses.
+     */
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+    Frame *frame = d->factory->createFrame(data.mid(frameDataPosition),
+                                           &d->header,
+                                           getOrgCharSet(),            //JBH add
+                                           getOrgCharSetConfidence()); //JBH add
+#else
     Frame *frame = d->factory->createFrame(data.mid(frameDataPosition),
                                            &d->header);
+#endif
+//JBH ==========================================================================>
 
+//JBH ==========================================================================<
+#define JBH_READ_FURTHER_0_LENGTH_FRAME
+#ifdef JBH_READ_FURTHER_0_LENGTH_FRAME
+    /*
+     * JBH FIXED: allow reading further after a 0 lengthed frame
+     */
+    if(!frame) {
+        uint frameHeaderSize = Frame::headerSize(d->header.majorVersion());
+        if (frameHeaderSize > 0) {
+          // frameDataPosition += Frame::headerSize(d->header.majorVersion());
+          frameDataPosition += frameHeaderSize;
+          continue;
+        }
+        else {
+          //JBH NOTE: prevent an infinite loop.
+          return;
+        }
+    }
+#else
     if(!frame)
       return;
+#endif
+//JBH ==========================================================================>
 
     // Checks to make sure that frame parsed correctly.
 
@@ -770,6 +982,7 @@ void ID3v2::Tag::parse(const ByteVector &origData)
     }
 
     frameDataPosition += frame->size() + Frame::headerSize(d->header.majorVersion());
+    String dbg_frame_id_str(frame->frameID()); //JBH debug
     addFrame(frame);
   }
 

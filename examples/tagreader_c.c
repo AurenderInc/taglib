@@ -27,6 +27,7 @@
 
 #ifndef FALSE
 #define FALSE 0
+#define TRUE 1 //JBH added
 #endif
 
 int main(int argc, char *argv[])
@@ -38,7 +39,7 @@ int main(int argc, char *argv[])
   TagLib_Tag *tag;
   const TagLib_AudioProperties *properties;
 
-  taglib_set_strings_unicode(FALSE);
+  taglib_set_strings_unicode(TRUE); //JBH changed from FALSE to TRUE
 
   for(i = 1; i < argc; i++) {
     printf("******************** \"%s\" ********************\n", argv[i]);

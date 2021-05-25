@@ -29,6 +29,7 @@
 #define TAGLIB_UNSYNCHRONIZEDLYRICSFRAME_H
 
 #include "id3v2frame.h"
+#include "taglib_config.h" //JBH: for JBH_USE_EMBEDDED_UNICODE_ENCODER
 
 namespace TagLib {
 
@@ -47,12 +48,24 @@ namespace TagLib {
        * Construct an empty unsynchronized lyrics frame that will use the text encoding
        * \a encoding.
        */
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+      explicit UnsynchronizedLyricsFrame(String::Type encoding = String::Latin1, std::string orgCharSet = "UNKNOWN", float orgCharSetConfidence = 0.0);
+#else
       explicit UnsynchronizedLyricsFrame(String::Type encoding = String::Latin1);
+#endif
+//JBH ==========================================================================>
 
       /*!
        * Construct a unsynchronized lyrics frame based on the data in \a data.
        */
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+      explicit UnsynchronizedLyricsFrame(const ByteVector &data, std::string orgCharSet = "UNKNOWN", float orgCharSetConfidence = 0.0);
+#else
       explicit UnsynchronizedLyricsFrame(const ByteVector &data);
+#endif
+//JBH ==========================================================================>
 
       /*!
        * Destroys this UnsynchronizedLyricsFrame instance.
@@ -166,7 +179,13 @@ namespace TagLib {
       /*!
        * The constructor used by the FrameFactory.
        */
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+      UnsynchronizedLyricsFrame(const ByteVector &data, Header *h, std::string orgCharSet="UNKNOWN", float orgCharSetConfidence=0.0);
+#else
       UnsynchronizedLyricsFrame(const ByteVector &data, Header *h);
+#endif
+//JBH ==========================================================================>
       UnsynchronizedLyricsFrame(const UnsynchronizedLyricsFrame &);
       UnsynchronizedLyricsFrame &operator=(const UnsynchronizedLyricsFrame &);
 

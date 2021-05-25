@@ -24,13 +24,19 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/s3m
   ${CMAKE_CURRENT_SOURCE_DIR}/it
   ${CMAKE_CURRENT_SOURCE_DIR}/xm
+#JBH ==========================================================================<
+  ${CMAKE_CURRENT_SOURCE_DIR}/dsf
+  ${CMAKE_CURRENT_SOURCE_DIR}/dsdiff
+#JBH ==========================================================================>
   ${CMAKE_SOURCE_DIR}/3rdparty
 )
 
 if(ZLIB_FOUND)
   include_directories(${ZLIB_INCLUDE_DIR})
+  message(STATUS "ZLIB_FOUND: ZLIB_INCLUDE_DIR: " ${ZLIB_INCLUDE_DIR}) #JBH added
 elseif(HAVE_ZLIB_SOURCE)
   include_directories(${ZLIB_SOURCE})
+  message(STATUS "HAVE_ZLIB_SOURCE: ZLIB_SOURCE" ${ZLIB_SOURCE}) #JBH added
 endif()
 
 set(tag_HDRS
@@ -138,6 +144,13 @@ set(tag_HDRS
   s3m/s3mproperties.h
   xm/xmfile.h
   xm/xmproperties.h
+#JBH ==========================================================================<
+  dsf/dsffile.h
+  dsf/dsfproperties.h
+  dsdiff/dsdifffile.h
+  dsdiff/dsdiffproperties.h
+  dsdiff/dsdiffdiintag.h
+#JBH ==========================================================================>
 )
 
 set(mpeg_SRCS
@@ -293,6 +306,19 @@ set(xm_SRCS
   xm/xmproperties.cpp
 )
 
+#JBH ==========================================================================<
+set(dsf_SRCS
+  dsf/dsffile.cpp
+  dsf/dsfproperties.cpp
+)
+
+set(dsdiff_SRCS
+  dsdiff/dsdifffile.cpp
+  dsdiff/dsdiffproperties.cpp
+  dsdiff/dsdiffdiintag.cpp
+)
+#JBH ==========================================================================<
+
 set(toolkit_SRCS
   toolkit/tstring.cpp
   toolkit/tstringlist.cpp
@@ -308,6 +334,142 @@ set(toolkit_SRCS
   toolkit/tdebuglistener.cpp
   toolkit/tzlib.cpp
 )
+
+#JBH ==========================================================================<
+if(${USE_QSTRING} MATCHES "ON")
+  message("JBH: USE_QSTRING: find_package: Qt5Core")
+  find_package(Qt5Core REQUIRED) #JBH: to use QString
+endif()
+
+#JBH: make sure set USE_QXTLOGGER or USE_JBHLOGGER exclusively @root/CMakeLists.txt
+if(${USE_QXTLOGGER} MATCHES "ON")
+  #JBH: to use QxtLogger<
+  message("JBH: USE_QXTLOGGER: sets QxtCore manually...")
+  add_definitions(-DJBH_USE_QXTLOGGER)
+
+  set(QxtCore_FOUND ON)
+  
+  if(${CMAKE_BUILD_TYPE} MATCHES "Release")
+      if( WIN32 )
+        #set(QxtCore_INCLUDE_DIR "D:\\AMM-LIBS\\include\\QxtCore")
+        #set(QxtCore_LIBRARIES   "D:\\AMM-LIBS\\lib\\QxtCore.lib")
+        set(QxtCore_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include/QxtCore")
+        set(QxtCore_LIBRARIES   "${CMAKE_INSTALL_PREFIX}/lib/QxtCore.lib")
+      elseif( APPLE )
+        set(QxtCore_INCLUDE_DIR "$ENV{HOME}/AMM-LIBS/include/QxtCore")
+        set(QxtCore_LIBRARIES   "$ENV{HOME}/AMM-LIBS/lib/QxtCore.framework/Versions/Current/QxtCore")
+      elseif( UNIX )
+        set(QxtCore_INCLUDE_DIR "/etc/amm/include/QxtCore")
+        set(QxtCore_LIBRARIES   "-L/etc/amm/lib -lQxtCore")
+      else()
+        message("JBH something wrong with the OS type!!!")
+        set(QxtCore_FOUND OFF)
+      endif()
+  else(${CMAKE_BUILD_TYPE} MATCHES "Release")
+      if( WIN32 )
+        #set(QxtCore_INCLUDE_DIR "D:\\AMM-LIBS-DEBUG\\include\\QxtCore")
+        #set(QxtCore_LIBRARIES   "D:\\AMM-LIBS-DEBUG\\lib\\QxtCored.lib")
+        set(QxtCore_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include/QxtCore")
+        set(QxtCore_LIBRARIES   "${CMAKE_INSTALL_PREFIX}/lib/QxtCored.lib")
+      elseif( APPLE )
+        set(QxtCore_INCLUDE_DIR "$ENV{HOME}/AMM-LIBS-DEBUG/include/QxtCore")
+        set(QxtCore_LIBRARIES   "$ENV{HOME}/AMM-LIBS-DEBUG/lib/QxtCore.framework/Versions/Current/QxtCore")
+      elseif( UNIX )
+        set(QxtCore_INCLUDE_DIR "/etc/amm/include/QxtCore")
+        set(QxtCore_LIBRARIES   "-L/etc/amm/lib -lQxtCore")
+      else()
+        message("JBH: something wrong with the OS type!!!")
+        set(QxtCore_FOUND OFF)
+      endif()
+  endif(${CMAKE_BUILD_TYPE} MATCHES "Release")
+  
+  message("JBH: sets QxtCore_INCLUDE_DIR: " ${QxtCore_INCLUDE_DIR})
+  message("JBH: sets QxtCore_LIBRARIES:   " ${QxtCore_LIBRARIES})
+  if(QxtCore_FOUND)
+    include_directories(${QxtCore_INCLUDE_DIR})
+  endif()
+  #JBH: to use QxtLogger>
+endif()
+
+#JBH
+if(${USE_JBHLOGGER} MATCHES "ON")
+  message("JBH: USE_JBHLOGGER: toolkit/jbh/Logger.cpp added")
+  add_definitions(-DJBH_USE_JBHLOGGER)
+  set(jbhLogger_SRCS
+    toolkit/jbh/Logger.cpp
+  )
+endif()
+#JBH ==========================================================================>
+
+
+#JBH ==========================================================================<
+#set(JBH_USE_EMBEDDED_UNICODE_ENCODER ON)
+if(${JBH_USE_EMBEDDED_UNICODE_ENCODER})
+  message("JBH: JBH_USE_EMBEDDED_UNICODE_ENCODER:   " ${JBH_USE_EMBEDDED_UNICODE_ENCODER})
+  # UCHARDET, CHARSETDETECTOR ---------------------------------------------------------
+  if( WIN32 )
+    set(UCHARDET_INCLUDE_DIR "${CMAKE_PREFIX_PATH}/include")
+    set(UCHARDET_LIBRARIES   "${CMAKE_PREFIX_PATH}/lib/uchardet.lib")
+  elseif( APPLE )
+    set(UCHARDET_INCLUDE_DIR "${CMAKE_PREFIX_PATH}/include")
+    set(UCHARDET_LIBRARIES   "${CMAKE_PREFIX_PATH}/lib/libuchardet.a")
+  elseif( UNIX )
+    set(UCHARDET_INCLUDE_DIR "${CMAKE_PREFIX_PATH}/include")  #for <uchardet/uchardet.h>
+    set(UCHARDET_LIBRARIES   "${CMAKE_PREFIX_PATH}/lib/libuchardet.a")
+  else()
+    message("JBH something wrong with the OS type!!!")
+    set(UCHARDET_FOUND OFF)
+  endif()
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/toolkit/jbh) #for charsetdetector.h
+  #include_directories(${CMAKE_PREFIX_PATH}/include)            #for <uchardet/uchardet.h>  JBH: For General build, uchardet.h is at $HOME/00GeneralLibs/include/uchardet
+  include_directories(${UCHARDET_INCLUDE_DIR})                 #for <uchardet/uchardet.h>
+  add_definitions(-DJBH_USE_EMBEDDED_UNICODE_ENCODER)
+  set(jbhCHARSETDETECTOR_SRCS
+    toolkit/jbh/charsetdetector.cpp
+  )
+  set(jbhCHARSETDETECTOR_HDRS
+    toolkit/jbh/charsetdetector.h
+  )
+  message("JBH: UCHARDET_INCLUDE_DIR: " ${UCHARDET_INCLUDE_DIR})
+  message("JBH: UCHARDET_LIBRARIES:   " ${UCHARDET_LIBRARIES})
+  message("JBH: CHARSETDETECTOR_HDRS: " ${jbhCHARSETDETECTOR_HDRS})
+
+  # ICONV, CHARSETCONVERTER ---------------------------------------------------------
+  if( WIN32 )
+    set(ICONV_INCLUDE_DIR "${CMAKE_PREFIX_PATH}/include")
+    if(${CMAKE_BUILD_TYPE} MATCHES "Release")
+      set(ICONV_LIBRARIES   "${CMAKE_PREFIX_PATH}/lib/libiconv_a.lib")
+    else()
+      set(ICONV_LIBRARIES   "${CMAKE_PREFIX_PATH}/lib/libiconv_a_debug.lib")
+    endif()
+  elseif( APPLE )
+    set(ICONV_INCLUDE_DIR "${CMAKE_PREFIX_PATH}/include")
+    set(ICONV_LIBRARIES   "${CMAKE_PREFIX_PATH}/lib/libiconv.a")
+  elseif( UNIX )
+    set(ICONV_INCLUDE_DIR "${CMAKE_PREFIX_PATH}/include")
+    set(ICONV_LIBRARIES   "${CMAKE_PREFIX_PATH}/lib/libiconv.a")
+  else()
+    message("JBH something wrong with the OS type!!!")
+    set(ICONV_FOUND OFF)
+  endif()
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/toolkit/jbh) #for charsetconverter.h
+  #include_directories(${CMAKE_PREFIX_PATH}/include)            #for iconv.h  JBH: For General build, iconv.h is at $HOME/00GeneralLibs/include
+  include_directories(${ICONV_INCLUDE_DIR})                    #for iconv.h
+  add_definitions(-DJBH_USE_ICONV)
+  set(jbhCHARSETCONVERTER_SRCS
+    toolkit/jbh/charsetconverter.cpp
+    toolkit/jbh/smartencodingoptionchecker.cpp
+  )
+  set(jbhCHARSETCONVERTER_HDRS
+    toolkit/jbh/charsetconverter.h
+    toolkit/jbh/smartencodingoptionchecker.h
+  )
+  message("JBH: ICONV_INCLUDE_DIR:     " ${ICONV_INCLUDE_DIR})
+  message("JBH: ICONV_LIBRARIES:       " ${ICONV_LIBRARIES})
+  message("JBH: CHARSETCONVERTER_HDRS: " ${jbhCHARSETCONVERTER_HDRS})
+endif()
+#JBH ==========================================================================>
+
 
 if(HAVE_ZLIB_SOURCE)
   set(zlib_SRCS
@@ -325,6 +487,9 @@ set(tag_LIB_SRCS
   ${vorbis_SRCS} ${oggflacs_SRCS} ${mpc_SRCS} ${ape_SRCS} ${toolkit_SRCS} ${flacs_SRCS}
   ${wavpack_SRCS} ${speex_SRCS} ${trueaudio_SRCS} ${riff_SRCS} ${aiff_SRCS} ${wav_SRCS}
   ${asf_SRCS} ${mp4_SRCS} ${mod_SRCS} ${s3m_SRCS} ${it_SRCS} ${xm_SRCS} ${opus_SRCS}
+#JBH ==========================================================================<
+  ${dsf_SRCS} ${dsdiff_SRCS} ${jbhLogger_SRCS} ${jbhCHARSETDETECTOR_SRCS} ${jbhCHARSETCONVERTER_SRCS}
+#JBH ==========================================================================>
   ${zlib_SRCS}
   tag.cpp
   tagunion.cpp
@@ -333,10 +498,37 @@ set(tag_LIB_SRCS
   tagutils.cpp
 )
 
+#JBH ==========================================================================<
+if(${JBH_USE_EMBEDDED_UNICODE_ENCODER})
+  set(tag_HDRS ${tag_HDRS} ${jbhCHARSETDETECTOR_HDRS} ${jbhCHARSETCONVERTER_HDRS})
+endif()
+#JBH ==========================================================================>
+
 add_library(tag ${tag_LIB_SRCS} ${tag_HDRS})
+
+#JBH ==========================================================================<
+#JBH COMMENTED OUT    if(NOT WIN32)
+if(${USE_QSTRING} MATCHES "ON")
+  target_link_libraries(tag Qt5::Core) #JBH: to use QString
+endif()
+
+if(${USE_QXTLOGGER} MATCHES "ON")
+  target_link_libraries(tag ${QxtCore_LIBRARIES}) #JBH: to use QxtLogger
+endif()
+#JBH COMMENTED OUT    endif()
+#JBH ==========================================================================>
+
+#JBH ==========================================================================<
+if(${JBH_USE_EMBEDDED_UNICODE_ENCODER})
+  #For DLL: link_directories(${CMAKE_PREFIX_PATH}/lib)
+  target_link_libraries(tag ${UCHARDET_LIBRARIES} ${ICONV_LIBRARIES}) #JBH: to use uchardet, iconv
+  #target_link_libraries(tag ${CMAKE_PREFIX_PATH}/lib/libuchardet.a ${CMAKE_PREFIX_PATH}/lib/libiconv.a) #JBH: static uchardet, iconv
+endif()
+#JBH ==========================================================================>
 
 if(HAVE_ZLIB AND NOT HAVE_ZLIB_SOURCE)
   target_link_libraries(tag ${ZLIB_LIBRARIES})
+  message(STATUS "target linking ZLIB_LIBRARIES: " ${ZLIB_LIBRARIES}) #JBH added
 endif()
 
 set_target_properties(tag PROPERTIES

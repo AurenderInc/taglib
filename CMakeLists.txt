@@ -1,3 +1,8 @@
+#JBH:
+# For AMS:     cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=ON -DCMAKE_PREFIX_PATH=/etc/amm -DCMAKE_INSTALL_PREFIX=/etc/amm -DUSE_QSTRING=ON -DUSE_APP_LOGGER=ON -DUSE_QXTLOGGER=ON -DUSE_JBHLOGGER=OFF -DWITH_ASF=ON -DWITH_MP4=ON -DBUILD_EXAMPLES=ON
+# For General: cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=ON -DCMAKE_PREFIX_PATH=$HOME/00GeneralLibs -DCMAKE_INSTALL_PREFIX=$HOME/00GeneralLibs -DJBH_BUILD_FOR_GENERAL=ON  -DJBH_USE_EMBEDDED_UNICODE_ENCODER=ON -DWITH_ASF=ON -DWITH_MP4=ON -DBUILD_EXAMPLES=ON
+#
+
 cmake_minimum_required(VERSION 2.8.0 FATAL_ERROR)
 
 project(taglib)
@@ -5,6 +10,8 @@ project(taglib)
 if(NOT ${CMAKE_VERSION} VERSION_LESS 2.8.12)
   cmake_policy(SET CMP0022 OLD)
 endif()
+
+message("JBH: CMAKE_PREFIX_PATH: " ${CMAKE_PREFIX_PATH})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
@@ -43,6 +50,25 @@ endif()
 option(BUILD_TESTS "Build the test suite" OFF)
 option(BUILD_EXAMPLES "Build the examples" OFF)
 option(BUILD_BINDINGS "Build the bindings" ON)
+
+#JBH ==========================================================================<
+#JBH: set USE_QXTLOGGER or USE_JBHLOGGER exclusively.
+#     Do not define here.
+#     Instead, give it as a command line option, such as
+#     cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=$INSTALL_DIRECTORY -DBUILD_SHARED_LIBS=ON -DUSE_APP_LOGGER=ON -DUSE_QXTLOGGER=ON -DUSE_JBHLOGGER=OFF -DWITH_ASF=ON -DWITH_MP4=ON -DBUILD_EXAMPLES=OFF
+# option(USE_APP_LOGGER "Log to App Logger"  ON)
+# option(USE_QXTLOGGER "Log using QxtLogger"  ON)
+# option(USE_JBHLOGGER "Log using JBHLogger"  OFF)
+message(STATUS "JBH: USE_APP_LOGGER: " ${USE_APP_LOGGER})
+message(STATUS "JBH: USE_QXTLOGGER: " ${USE_QXTLOGGER})
+message(STATUS "JBH: USE_JBHLOGGER: " ${USE_JBHLOGGER})
+#JBH ==========================================================================>
+
+#JBH ==========================================================================<
+#JBH: cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=$INSTALL_DIRECTORY -DBUILD_SHARED_LIBS=ON -DJBH_USE_EMBEDDED_UNICODE_ENCODER=ON
+# option(JBH_USE_EMBEDDED_UNICODE_ENCODER "Detects CharSet using UCHARDET"  OFF)
+message(STATUS "JBH: JBH_USE_EMBEDDED_UNICODE_ENCODER: " ${JBH_USE_EMBEDDED_UNICODE_ENCODER})
+#JBH ==========================================================================>
 
 option(NO_ITUNES_HACKS "Disable workarounds for iTunes bugs" OFF)
 

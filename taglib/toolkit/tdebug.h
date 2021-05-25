@@ -31,8 +31,8 @@ namespace TagLib {
   class String;
   class ByteVector;
 
-#ifndef DO_NOT_DOCUMENT
-#if !defined(NDEBUG) || defined(TRACE_IN_RELEASE)
+//JBH: always enalbe debug()    #ifndef DO_NOT_DOCUMENT
+//JBH: always enalbe debug()    #if !defined(NDEBUG) || defined(TRACE_IN_RELEASE)
 
   /*!
    * A simple function that outputs the debug messages to the listener.
@@ -58,13 +58,13 @@ namespace TagLib {
    */
   void debugData(const ByteVector &v);
 
-#else
-
-  #define debug(x)      ((void)0)
-  #define debugData(x)  ((void)0)
-
-#endif
+//JBH: always enalbe debug()    #else
+//JBH: always enalbe debug()    
+//JBH: always enalbe debug()      #define debug(x)      ((void)0)
+//JBH: always enalbe debug()      #define debugData(x)  ((void)0)
+//JBH: always enalbe debug()    
+//JBH: always enalbe debug()    #endif
 }
 
-#endif
+//JBH: always enalbe debug()    #endif
 #endif

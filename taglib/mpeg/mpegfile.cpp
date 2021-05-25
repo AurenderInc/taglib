@@ -506,6 +506,8 @@ void MPEG::File::read(bool readProperties)
   if(d->ID3v1Location >= 0)
     d->tag.set(ID3v1Index, new ID3v1::Tag(this, d->ID3v1Location));
 
+#define JBH_READ_APE_TAG_4_MP3
+#ifdef JBH_READ_APE_TAG_4_MP3
   // Look for an APE tag
 
   d->APELocation = Utils::findAPE(this, d->ID3v1Location);
@@ -515,6 +517,7 @@ void MPEG::File::read(bool readProperties)
     d->APEOriginalSize = APETag()->footer()->completeTagSize();
     d->APELocation = d->APELocation + APE::Footer::size() - d->APEOriginalSize;
   }
+#endif
 
   if(readProperties)
     d->properties = new Properties(this);

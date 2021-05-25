@@ -82,6 +82,13 @@ MP4::Tag::Tag(TagLib::File *file, MP4::Atoms *atoms) :
             atom->name == "cmID") {
       parseUInt(atom);
     }
+//JBH ==========================================================================<
+    //for MQA
+    else if(atom->name == "orfs") { //JBH: value comes as a string not integer, such as "48000"
+      //parseText(atom, file);
+      parseText(atom);
+    }
+//JBH ==========================================================================>
     else if(atom->name == "plID") {
       parseLongLong(atom);
     }
@@ -488,6 +495,12 @@ MP4::Tag::save()
             name == "cmID") {
       data.append(renderUInt(name.data(String::Latin1), it->second));
     }
+//JBH ==========================================================================<
+    //for MQA
+    else if(name == "orfs") {
+      data.append(renderText(name.data(String::Latin1), it->second)); //value is saved as a string not integer, such as "48000"
+    }
+//JBH ==========================================================================>
     else if(name == "plID") {
       data.append(renderLongLong(name.data(String::Latin1), it->second));
     }
@@ -751,6 +764,16 @@ MP4::Tag::track() const
   return 0;
 }
 
+//JBH ==========================================================================<
+String
+MP4::Tag::guid() const
+{
+  if(d->items.contains("----:com.apple.iTunes:GUID"))
+    return d->items["----:com.apple.iTunes:GUID"].toStringList().toString(", ");
+  return String::null;
+}
+//JBH ==========================================================================>
+
 void
 MP4::Tag::setTitle(const String &value)
 {
@@ -992,6 +1015,6 @@ void MP4::Tag::addItem(const String &name, const Item &value)
     d->items.insert(name, value);
   }
   else {
-    debug("MP4: Ignoring duplicate atom \"" + name + "\"");
+    //JBH too many logs    debug("MP4: Ignoring duplicate atom \"" + name + "\"");
   }
 }

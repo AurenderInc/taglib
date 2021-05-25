@@ -103,6 +103,13 @@ int S3M::Properties::channels() const
   return d->channels;
 }
 
+//JBH ==========================================================================<
+int S3M::Properties::bitwidth() const //JBH
+{
+  return 0;
+}
+//JBH ==========================================================================>
+
 unsigned short S3M::Properties::lengthInPatterns() const
 {
   return d->lengthInPatterns;

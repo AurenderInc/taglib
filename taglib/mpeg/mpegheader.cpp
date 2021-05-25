@@ -172,6 +172,22 @@ MPEG::Header &MPEG::Header::operator=(const Header &h)
 
 void MPEG::Header::parse(File *file, long offset, bool checkLength)
 {
+  /*
+   * JBH NOTE: MPEG Audio Layer Frame Header --> 32bit (4 bytes)
+   *
+   *           AAAAAAAAAAA BB CC  D   EEEE  FF  G   H  II  JJ  K   L  MM
+   *           0           12 14  15  16    20  22  23 24  26  28  29 30
+   *
+   *           BB: MPEG VERSION 1, 2, 2.5
+   *           CC: Layer I, II, III
+   *           EEEE (first 4 bits of the 3rd byte): Bitrate Index
+   *           See http://www.mp3-tech.org/programmer/frame_header.html
+   *
+   *     REVERSED ORDER:
+   *           MM  L  K  JJ  II  H  G  FF  EEEE  D   CC  BB   AAAAAAAAAAA
+   *           0   2  3  4   6   8  9  10  12    16  17  19   21
+   */
+
   file->seek(offset);
   const ByteVector data = file->readBlock(4);
 

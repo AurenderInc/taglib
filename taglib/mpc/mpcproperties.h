@@ -108,6 +108,13 @@ namespace TagLib {
        */
       virtual int channels() const;
 
+//JBH ==========================================================================<
+      /*!
+       * Returns the bit width of audio sample.
+       */
+      virtual int bitwidth() const;
+//JBH ==========================================================================>
+
       /*!
        * Returns the version of the bitstream (SV4-SV8)
        */

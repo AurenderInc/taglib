@@ -96,6 +96,13 @@ namespace TagLib {
        */
       virtual int bitsPerSample() const;
 
+//JBH ==========================================================================<
+      /*!
+       * Returns the bit width of audio sample.
+       */
+      virtual int bitwidth() const;
+//JBH ==========================================================================>
+
       /*!
        * Returns whether or not the file is encrypted.
        */

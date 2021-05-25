@@ -79,6 +79,7 @@ String::Type AttachedPictureFrame::textEncoding() const
 
 void AttachedPictureFrame::setTextEncoding(String::Type t)
 {
+  //JBH: possible enum values: {Latin1, UTF16, UTF16BE, UTF8, UTF16LE}
   d->textEncoding = t;
 }
 
@@ -133,6 +134,7 @@ void AttachedPictureFrame::parseFields(const ByteVector &data)
     return;
   }
 
+  //JBH: The first byte of a field is always the encoding type in id3v2 by the spec?
   d->textEncoding = String::Type(data[0]);
 
   int pos = 1;
@@ -189,6 +191,7 @@ void AttachedPictureFrameV22::parseFields(const ByteVector &data)
     return;
   }
 
+  //JBH: The first byte of a field is always the encoding type in id3v2 by the spec?
   d->textEncoding = String::Type(data[0]);
 
   int pos = 1;

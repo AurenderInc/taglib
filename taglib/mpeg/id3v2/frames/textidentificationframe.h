@@ -29,6 +29,7 @@
 #include "tstringlist.h"
 #include "tmap.h"
 #include "taglib_export.h"
+#include "taglib_config.h" //JBH: for JBH_USE_EMBEDDED_UNICODE_ENCODER
 
 #include "id3v2frame.h"
 
@@ -117,13 +118,24 @@ namespace TagLib {
        *
        * \note Please see the note in the class description regarding Latin1.
        */
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+      TextIdentificationFrame(const ByteVector &type, String::Type encoding, std::string orgCharSet="UNKNOWN", float orgCharSetConfidence=0.0);
+#else
       TextIdentificationFrame(const ByteVector &type, String::Type encoding);
+#endif
+//JBH ==========================================================================>
 
       /*!
        * This is a dual purpose constructor.  \a data can either be binary data
        * that should be parsed or (at a minimum) the frame ID.
        */
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+      explicit TextIdentificationFrame(const ByteVector &data, std::string orgCharSet="UNKNOWN", float orgCharSetConfidence=0.0);
+#else
       explicit TextIdentificationFrame(const ByteVector &data);
+#endif
 
       /*!
        * This is a special factory method to create a TIPL (involved people list)
@@ -206,7 +218,14 @@ namespace TagLib {
       /*!
        * The constructor used by the FrameFactory.
        */
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+      TextIdentificationFrame(const ByteVector &data, Header *h, std::string orgCharSet="UNKNOWN", float orgCharSetConfidence=0.0);
+#else
       TextIdentificationFrame(const ByteVector &data, Header *h);
+#endif
+//JBH ==========================================================================>
+
 
     private:
       TextIdentificationFrame(const TextIdentificationFrame &);

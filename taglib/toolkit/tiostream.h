@@ -1,4 +1,4 @@
-/***************************************************************************
+﻿/***************************************************************************
     copyright            : (C) 2011 by Lukas Lalinsky
     email                : lalinsky@gmail.com
  ***************************************************************************/
@@ -33,6 +33,13 @@
 namespace TagLib {
 
 #ifdef _WIN32
+
+//JBH <<<<<<<<<<<<<<<<<<<<<
+//TagLib::FileName'의 클라이언트에서 DLL 인터페이스를 사용하도록 지정해야 합니다.
+#pragma warning(push)
+#pragma warning(disable:4251)
+//JBH >>>>>>>>>>>>>>>>>>>>>
+
   class TAGLIB_EXPORT FileName
   {
   public:
@@ -53,6 +60,12 @@ namespace TagLib {
     const std::string  m_name;
     const std::wstring m_wname;
   };
+
+//JBH <<<<<<<<<<<<<<<<<<<<<
+//TagLib::FileName'의 클라이언트에서 DLL 인터페이스를 사용하도록 지정해야 합니다.
+#pragma warning(pop)
+//JBH >>>>>>>>>>>>>>>>>>>>>
+
 #else
   typedef const char *FileName;
 #endif

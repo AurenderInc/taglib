@@ -152,6 +152,13 @@ bool APE::File::save()
 {
   if(readOnly()) {
     debug("APE::File::save() -- File is read only.");
+//JBH ==========================================================================<
+  #ifdef _WIN32
+    debug("JBH: APE file: " + static_cast<FileName>(name()).toString()); //JBH add
+  #else
+    debug("JBH: APE file: " + String(name(), String::UTF8)); //JBH add
+  #endif
+//JBH ==========================================================================>
     return false;
   }
 

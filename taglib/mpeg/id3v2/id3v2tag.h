@@ -1,4 +1,4 @@
-/***************************************************************************
+﻿/***************************************************************************
     copyright            : (C) 2002 - 2008 by Scott Wheeler
     email                : wheeler@kde.org
  ***************************************************************************/
@@ -32,6 +32,7 @@
 #include "tlist.h"
 #include "tmap.h"
 #include "taglib_export.h"
+#include "taglib_config.h" //JBH: for JBH_USE_EMBEDDED_UNICODE_ENCODER
 
 #include "id3v2framefactory.h"
 
@@ -171,6 +172,9 @@ namespace TagLib {
       virtual String genre() const;
       virtual unsigned int year() const;
       virtual unsigned int track() const;
+
+      virtual String waki() const; //JBH
+      virtual String guid() const; //JBH
 
       virtual void setTitle(const String &s);
       virtual void setArtist(const String &s);
@@ -374,6 +378,26 @@ namespace TagLib {
        * \see Latin1StringHandler
        */
       static void setLatin1StringHandler(const Latin1StringHandler *handler);
+
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+  #ifdef _WIN32
+    //TagLib::FileName'의 클라이언트에서 DLL 인터페이스를 사용하도록 지정해야 합니다.
+    #pragma warning(push)
+    #pragma warning(disable:4251)
+  #endif
+      void setOrgCharSet(std::string orgCharSet);
+      std::string getOrgCharSet();
+      std::string _orgCharSet;
+      void  setOrgCharSetConfidence(float orgCharSetConfidence);
+      float getOrgCharSetConfidence();
+      float _orgCharSetConfidence;
+  #ifdef _WIN32
+    //TagLib::FileName'의 클라이언트에서 DLL 인터페이스를 사용하도록 지정해야 합니다.
+    #pragma warning(pop)
+  #endif
+#endif
+//JBH ==========================================================================>
 
     protected:
       /*!

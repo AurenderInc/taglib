@@ -95,6 +95,9 @@ namespace TagLib {
       virtual unsigned int year() const;
       virtual unsigned int track() const;
 
+      virtual String guid() const; //JBH added
+
+
       virtual void setTitle(const String &s);
       virtual void setArtist(const String &s);
       virtual void setAlbum(const String &s);

@@ -114,6 +114,13 @@ int MPEG::Properties::channels() const
   return d->channels;
 }
 
+//JBH ==========================================================================<
+int MPEG::Properties::bitwidth() const //JBH
+{
+  return 0;
+}
+//JBH ==========================================================================>
+
 const MPEG::XingHeader *MPEG::Properties::xingHeader() const
 {
   return d->xingHeader;
@@ -160,6 +167,13 @@ void MPEG::Properties::read(File *file)
   const long firstFrameOffset = file->firstFrameOffset();
   if(firstFrameOffset < 0) {
     debug("MPEG::Properties::read() -- Could not find an MPEG frame in the stream.");
+//JBH ==========================================================================<
+#ifdef _WIN32
+    debug("MPEG file: " + static_cast<FileName>(file->name()).toString());
+#else
+    debug("MPEG file: " + String(file->name(), String::UTF8));
+#endif
+//JBH ==========================================================================>
     return;
   }
 
@@ -200,6 +214,13 @@ void MPEG::Properties::read(File *file)
     const long lastFrameOffset = file->lastFrameOffset();
     if(lastFrameOffset < 0) {
       debug("MPEG::Properties::read() -- Could not find an MPEG frame in the stream.");
+//JBH ==========================================================================<
+#ifdef _WIN32
+      debug("MPEG file: " + static_cast<FileName>(file->name()).toString());
+#else
+      debug("MPEG file: " + String(file->name(), String::UTF8));
+#endif
+//JBH ==========================================================================>
       return;
     }
 

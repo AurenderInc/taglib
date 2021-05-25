@@ -49,6 +49,7 @@ namespace TagLib {
       int bitrate()              const;
       int sampleRate()           const;
       int channels()             const;
+      int bitwidth()   const; //JBH
 
       unsigned short lengthInPatterns() const;
       unsigned short version()          const;

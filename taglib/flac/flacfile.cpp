@@ -470,6 +470,10 @@ void FLAC::File::scan()
     return;
 
   long nextBlockOffset;
+  int  numZeroBlocks = 0; //JBH add
+  bool gotStreamInfoBlock    = false; //JBH add
+  bool gotVorbisCommentBlock = false; //JBH add
+  bool gotPictureBlock = false; //JBH add
 
   if(d->ID3v2Location >= 0)
     nextBlockOffset = find("fLaC", d->ID3v2Location + d->ID3v2OriginalSize);
@@ -478,6 +482,14 @@ void FLAC::File::scan()
 
   if(nextBlockOffset < 0) {
     debug("FLAC::File::scan() -- FLAC stream not found");
+//JBH ==========================================================================<
+    debug("!!! [WARNING:JBH] FLAC::File::scan(): JBH: no further scan.");
+#ifdef _WIN32
+    debug("!!! JBH: FLAC file: " + static_cast<FileName>(name()).toString());
+#else
+    debug("!!! JBH: FLAC file: " + String(name(), String::UTF8));
+#endif
+//JBH ==========================================================================>
     setValid(false);
     return;
   }
@@ -491,16 +503,17 @@ void FLAC::File::scan()
     const ByteVector header = readBlock(4);
 
     // Header format (from spec):
-    // <1> Last-metadata-block flag
-    // <7> BLOCK_TYPE
-    //    0 : STREAMINFO
-    //    1 : PADDING
-    //    ..
-    //    4 : VORBIS_COMMENT
-    //    ..
-    //    6 : PICTURE
-    //    ..
-    // <24> Length of metadata to follow
+    //  <1>  Last-metadata-block flag
+    //  <7>  BLOCK_TYPE:
+    //         0 : STREAMINFO
+    //         1 : PADDING
+    //         2 : APPLICATION
+    //         3 : SEEKTABLE
+    //         4 : VORBISCOMMENT
+    //         5 : CUESHEET
+    //         6 : PICTURE
+    //    
+    // <24>  Length of metadata to follow
 
     const char blockType = header[0] & ~LastBlockFlag;
     const bool isLastBlock = (header[0] & LastBlockFlag) != 0;
@@ -510,21 +523,148 @@ void FLAC::File::scan()
 
     if(d->blocks.isEmpty() && blockType != MetadataBlock::StreamInfo) {
       debug("FLAC::File::scan() -- First block should be the stream_info metadata");
+//JBH ==========================================================================<
+    debug("!!! [WARNING:JBH] FLAC::File::scan(): JBH: no further scan.");
+#ifdef _WIN32
+    debug("!!! JBH: FLAC file: " + static_cast<FileName>(name()).toString());
+#else
+    debug("!!! JBH: FLAC file: " + String(name(), String::UTF8));
+#endif
+//JBH ==========================================================================>
       setValid(false);
       return;
     }
 
+    /*
+     *JBH: MetadataBlock types:       StreamInfo(0), Padding(1), Application(2), SeekTable(3), VorbisComment(4), CueSheet(5), Picture(6)
+     *     Important blocks to read:  StreamInfo(0), VorbisComment(4), Picture(6)
+     */
+
+//JBH ==========================================================================<
+#define JBH_READON_0_LENGTH_BLOCK
+#ifdef  JBH_READON_0_LENGTH_BLOCK
+    if (blockLength == 0)
+    {
+      /*
+       * JBH NOTE:  a possible fix for the following mal-formed cases:
+       *            case 1: Some FLAC has the zero     length first block while other blocks has non-zeros. "03 Shostakovich Piano Concerto No 1 Mvt 3.flac"
+       *            case 2: Some FLAC has the non-zero length first block while other blocks has zeros. "2-Ramblin Rose.flac"
+       *
+       *            Possible Further Enhancement:
+       *            For the case 2, there are typically lots (millions) of 0-sized blocks followed, which causes few million times of (useless) seek for a large file.
+       *            FYI: 2 million times of seek(4) takes 12 secs for a 106MB file.
+       *            Stop reading further (but treat VALID) to speed up, since we've got the minimum valid blocks anyway.
+       */
+
+      bool exitInvalid = false;
+      numZeroBlocks++;
+
+      switch (blockType)
+      {
+        /*
+         *JBH: These types of block should not be 0-sized by the spec.
+         *
+         *     However there are mal-formed flacs which have blocks in this sequence:
+         *     [valid StreamInfo] [valid VorbisComment] [valid Picture] then [Invalid StreamInfo] [Invalid StreamInfo] ...  [Invalid StreamInfo]
+         *     Allow this case since we've got at least one valid StreamInfo block (the 1st block).
+         *
+         *     Note that the invalid (0-sized) blocks typically have the blockType of 0 which is StreamInfo.
+         */
+        case MetadataBlock::StreamInfo:    // 0
+          exitInvalid = false;
+          break;
+
+        case MetadataBlock::VorbisComment: // 4
+        case MetadataBlock::Picture:       // 6
+          exitInvalid = true;
+          break;
+
+        case MetadataBlock::Padding:       // 1
+        case MetadataBlock::Application:   // 2
+        case MetadataBlock::SeekTable:     // 3
+        case MetadataBlock::CueSheet:      // 5
+          exitInvalid = false;
+          break;
+
+        default: //JBH: undefined block type
+          exitInvalid = true;
+          break;
+      }
+
+      if (exitInvalid)
+      {
+        debug("!!! [WARNING:JBH] FLAC::File::scan(): Zero-sized metadata block found, So Stop reading here.");
+      #ifdef _WIN32
+        debug("!!! JBH: FLAC file: " + static_cast<FileName>(name()).toString());
+      #else
+        debug("!!! JBH: FLAC file: " + String(name(), String::UTF8));
+      #endif
+        setValid(false);
+        return;
+      }
+      else
+      {
+    #define JBH_EXIT_EARLY_0_LENGTH_BLOCK
+    #ifdef  JBH_EXIT_EARLY_0_LENGTH_BLOCK
+        //if (gotStreamInfoBlock && gotVorbisCommentBlock && gotPictureBlock) //case: must [valid StreamInfo] + must [valid VorbisComment] + must [valid Picture], then [Invalid StreamInfo]
+        //if (gotStreamInfoBlock && gotVorbisCommentBlock) //case: must [valid StreamInfo] + must [valid VorbisComment] + optional [valid Picture], then [Invalid StreamInfo]
+        if (gotStreamInfoBlock) //case: must [valid StreamInfo] + optional [valid VorbisComment] + optional [valid Picture], then [Invalid StreamInfo]
+        {
+          //JBH: Stop reading further (but treat VALID) to speed up, since we've got at least a valid StreamInfoBlock anyway.
+          setValid(true); //JBH: mark it valid.
+          return;
+        }
+        else
+        {
+            //JBH: The StreamInfo block has not been found so far.
+            if (numZeroBlocks > 10)
+            {
+              //JBH: The StreamInfo block has not been found so far from the first 10 consecutive 0-length blocks
+              //     Treat it INVALID!
+              debug("!!! [WARNING:JBH] FLAC::File::scan(): StreamInfo not found from the first 10 consecutive 0-length blocks. Stop reading.");
+            #ifdef _WIN32
+              debug("!!! JBH: FLAC file: " + static_cast<FileName>(name()).toString());
+            #else
+              debug("!!! JBH: FLAC file: " + String(name(), String::UTF8));
+            #endif
+              setValid(false); //Treat it INVALID!
+              return;
+            }
+        }
+    #endif
+        nextBlockOffset += blockLength + 4; //JBH: advance to the next block.
+        continue; //JBH: 
+      }
+    }
+#else //NOT JBH_READON_0_LENGTH_BLOCK
+    //JBH: 0-length allowed only for Padding and SeekTable blocks?
     if(blockLength == 0
       && blockType != MetadataBlock::Padding && blockType != MetadataBlock::SeekTable)
     {
       debug("FLAC::File::scan() -- Zero-sized metadata block found");
+      debug("!!! [WARNING:JBH] FLAC::File::scan(): Zero-sized metadata block found, So Stop reading here.");
+  #ifdef _WIN32
+      debug("!!! JBH: FLAC file: " + static_cast<FileName>(name()).toString());
+  #else
+      debug("!!! JBH: FLAC file: " + String(name(), String::UTF8));
+  #endif
       setValid(false);
       return;
     }
+#endif //END JBH_READON_0_LENGTH_BLOCK
+//JBH ==========================================================================>
 
     const ByteVector data = readBlock(blockLength);
     if(data.size() != blockLength) {
       debug("FLAC::File::scan() -- Failed to read a metadata block");
+//JBH ==========================================================================<
+    debug("!!! [WARNING:JBH] FLAC::File::scan(): JBH: no further scan.");
+#ifdef _WIN32
+    debug("!!! JBH: FLAC file: " + static_cast<FileName>(name()).toString());
+#else
+    debug("!!! JBH: FLAC file: " + String(name(), String::UTF8));
+#endif
+//JBH ==========================================================================>
       setValid(false);
       return;
     }
@@ -536,24 +676,46 @@ void FLAC::File::scan()
       if(d->xiphCommentData.isEmpty()) {
         d->xiphCommentData = data;
         block = new UnknownMetadataBlock(MetadataBlock::VorbisComment, data);
+        gotVorbisCommentBlock = true;
       }
       else {
         debug("FLAC::File::scan() -- multiple Vorbis Comment blocks found, discarding");
+//JBH ==========================================================================<
+#ifdef _WIN32
+        debug("!!! JBH: FLAC file: " + static_cast<FileName>(name()).toString());
+#else
+        debug("!!! JBH: FLAC file: " + String(name(), String::UTF8));
+#endif
+//JBH ==========================================================================>
       }
     }
     else if(blockType == MetadataBlock::Picture) {
       FLAC::Picture *picture = new FLAC::Picture();
       if(picture->parse(data)) {
         block = picture;
+        gotPictureBlock = true;
       }
       else {
         debug("FLAC::File::scan() -- invalid picture found, discarding");
+//JBH ==========================================================================<
+#ifdef _WIN32
+        debug("!!! JBH: FLAC file: " + static_cast<FileName>(name()).toString());
+#else
+        debug("!!! JBH: FLAC file: " + String(name(), String::UTF8));
+#endif
+//JBH ==========================================================================>
         delete picture;
       }
     }
     else if(blockType == MetadataBlock::Padding) {
       // Skip all padding blocks.
     }
+//JBH ==========================================================================<
+    else if(blockType == MetadataBlock::StreamInfo) {
+      block = new UnknownMetadataBlock(blockType, data);
+      gotStreamInfoBlock = true;
+    }
+//JBH ==========================================================================>
     else {
       block = new UnknownMetadataBlock(blockType, data);
     }
@@ -562,6 +724,22 @@ void FLAC::File::scan()
       d->blocks.append(block);
 
     nextBlockOffset += blockLength + 4;
+
+//JBH ==========================================================================<
+#define JBH_CHECK_FLAC_FILELENGTH
+#ifdef  JBH_CHECK_FLAC_FILELENGTH
+    if(nextBlockOffset >= File::length()) {
+      debug("!!! [WARNING:JBH] FLAC::File::scan() -- FLAC overrun the file length. JBH: exit scan");
+  #ifdef _WIN32
+      debug("!!! JBH: FLAC file " + static_cast<FileName>(name()).toString()); //JBH add
+  #else
+      debug("!!! JBH: FLAC file " + String(name(), String::UTF8)); //JBH add
+  #endif
+      setValid(false);
+      return;
+    }
+#endif
+//JBH ==========================================================================<
 
     if(isLastBlock)
       break;
@@ -572,4 +750,16 @@ void FLAC::File::scan()
   d->streamStart = nextBlockOffset;
 
   d->scanned = true;
+
+//JBH ==========================================================================<
+  if (numZeroBlocks !=0)
+  {
+    debug("!!! [WARNING:JBH] FLAC::File::scan(): Zero-sized metadata blocks: " + String::number(numZeroBlocks));
+  #ifdef _WIN32
+    debug("!!! JBH: FLAC file: " + static_cast<FileName>(name()).toString());
+  #else
+    debug("!!! JBH: FLAC file: " + String(name(), String::UTF8));
+  #endif
+  }
+//JBH ==========================================================================<
 }

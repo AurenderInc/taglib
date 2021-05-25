@@ -85,6 +85,13 @@ int Mod::Properties::channels() const
   return d->channels;
 }
 
+//JBH ==========================================================================<
+int Mod::Properties::bitwidth() const //JBH
+{
+  return 0;
+}
+//JBH ==========================================================================>
+
 unsigned int Mod::Properties::instrumentCount() const
 {
   return d->instrumentCount;

@@ -104,6 +104,13 @@ int Opus::Properties::channels() const
   return d->channels;
 }
 
+//JBH ==========================================================================<
+int Opus::Properties::bitwidth() const //JBH
+{
+  return 0;
+}
+//JBH ==========================================================================>
+
 int Opus::Properties::inputSampleRate() const
 {
   return d->inputSampleRate;

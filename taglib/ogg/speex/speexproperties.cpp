@@ -112,6 +112,13 @@ int Speex::Properties::channels() const
   return d->channels;
 }
 
+//JBH ==========================================================================<
+int Speex::Properties::bitwidth() const //JBH
+{
+  return 0;
+}
+//JBH ==========================================================================<
+
 int Speex::Properties::speexVersion() const
 {
   return d->speexVersion;

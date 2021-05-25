@@ -110,6 +110,14 @@ MP4::Properties::bitsPerSample() const
   return d->bitsPerSample;
 }
 
+//JBH ==========================================================================<
+int
+MP4::Properties::bitwidth() const //JBH
+{
+  return d->bitsPerSample;
+}
+//JBH ==========================================================================>
+
 bool
 MP4::Properties::isEncrypted() const
 {

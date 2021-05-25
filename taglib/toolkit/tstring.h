@@ -392,6 +392,15 @@ namespace TagLib {
      */
     static String number(int n);
 
+//JBH ==========================================================================<
+    /*!
+     * Converts the base-10 integer \a n to a string.
+     */
+    static String number(unsigned int n);
+    static String number(long n);
+    static String number(unsigned long n);
+//JBH ==========================================================================>
+
     /*!
      * Returns a reference to the character at position \a i.
      */

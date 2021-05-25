@@ -27,7 +27,8 @@
 #include <config.h>
 #endif
 
-#if !defined(NDEBUG) || defined(TRACE_IN_RELEASE)
+//#define USE_APP_LOGGER //JBH: define it as a cmake option, such as [cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$INSTALL_DIRECTORY -DUSE_APP_LOGGER=ON -DUSE_QXTLOGGER=ON -DUSE_JBHLOGGER=OFF -DWITH_ASF=ON -DWITH_MP4=ON -DBUILD_EXAMPLES=OFF]
+//JBH_COMMENTED_OUT #if !defined(NDEBUG) || defined(TRACE_IN_RELEASE)
 
 #include "tdebug.h"
 #include "tstring.h"
@@ -45,7 +46,17 @@ namespace TagLib
 
   void debug(const String &s)
   {
+#ifdef USE_APP_LOGGER
+    debugListener->printMessage(s);
+#else
+  #define JBH_PRINT_ON_STDOUT
+  #ifdef  JBH_PRINT_ON_STDOUT
+    //std::cerr << s.toCString(true /*encode to UTF-8*/) << std::endl;
+    std::cout << s.toCString(true /*encode to UTF-8*/) << std::endl;
+  #else
     debugListener->printMessage("TagLib: " + s + "\n");
+  #endif
+#endif
   }
 
   void debugData(const ByteVector &v)
@@ -61,4 +72,4 @@ namespace TagLib
   }
 }
 
-#endif
+//JBH_COMMENTED_OUT #endif

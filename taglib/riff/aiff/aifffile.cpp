@@ -161,7 +161,7 @@ void RIFF::AIFF::File::read(bool readProperties)
         d->hasID3v2 = true;
       }
       else {
-        debug("RIFF::AIFF::File::read() - Duplicate ID3v2 tag found.");
+        //JBH too many logs    debug("RIFF::AIFF::File::read() - Duplicate ID3v2 tag found. New tag will not be added"); //JBH
       }
     }
   }

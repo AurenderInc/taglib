@@ -115,6 +115,13 @@ namespace TagLib {
        */
       int bitsPerSample() const;
 
+//JBH ==========================================================================<
+      /*!
+       * Returns the bit width of audio sample.
+       */
+      int bitwidth() const;
+//JBH ==========================================================================>
+
       /*!
        * Returns the total number of audio samples in file.
        */

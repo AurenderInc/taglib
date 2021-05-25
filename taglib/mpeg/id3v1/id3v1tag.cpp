@@ -63,6 +63,16 @@ public:
 // StringHandler implementation
 ////////////////////////////////////////////////////////////////////////////////
 
+/*
+ * JBH: Kid3::TagLibFile::TextCodecStringHandlerForID3v1 extends/implements "TagLib" class, TagLib::ID3v1::StringHandler.
+ *      TagLib::ID3v1::StringHandler is a text (unicode) encoder.
+ *      We implement an our own unicode encoder (TextCodecStringHandlerForID3v1) here, and "register" it to TagLib by TagLib::ID3v1::Tag::setStringHandler(m_textCodecStringHandlerForID3v1) @ Kid3::TagLibFile::TagLibInitializer::init()
+ *      Then, TagLib will "call back" our encoder: TagLib::ID3v1::Tag::parse() --> stringHandler->parse() --> Kid3::TagLibFile::TextCodecStringHandlerForID3v1::parse()
+ *
+ *      In this way, we can implement/supply our own unicode encoder to TagLib.
+ *      FIXME: we do this only for ID3V1. why not apply the same mechanism to ID3V2?     
+ */
+
 StringHandler::StringHandler()
 {
 }
@@ -209,6 +219,11 @@ void ID3v1::Tag::setGenreNumber(unsigned int i)
 
 void ID3v1::Tag::setStringHandler(const StringHandler *handler)
 {
+  /*
+   * JBH: This "setStringHandler()" can be called from a client of the taglib.
+   *      Taglib will callback the client-side-defined "handler", to give the client a chance to text-encode.
+   *      NOTE: This is only for ID3 V1, not V2. (For V2, refer to ID3v2::Tag::setLatin1StringHandler())
+   */
   if(handler)
     stringHandler = handler;
   else
@@ -236,6 +251,16 @@ void ID3v1::Tag::read()
 
 void ID3v1::Tag::parse(const ByteVector &data)
 {
+  /*
+   * JBH: Kid3::TagLibFile::TextCodecStringHandlerForID3v1 extends/implements "TagLib" class, TagLib::ID3v1::StringHandler.
+   *      TagLib::ID3v1::StringHandler is a text (unicode) encoder.
+   *      We implement an our own unicode encoder (TextCodecStringHandlerForID3v1) here, and "register" it to TagLib by TagLib::ID3v1::Tag::setStringHandler(m_textCodecStringHandlerForID3v1) @ Kid3::TagLibFile::TagLibInitializer::init()
+   *      Then, TagLib will "call back" our encoder: TagLib::ID3v1::Tag::parse() --> stringHandler->parse() --> Kid3::TagLibFile::TextCodecStringHandlerForID3v1::parse()
+   *
+   *      In this way, we can implement/supply our own unicode encoder to TagLib.
+   *      FIXME: we do this only for ID3V1. why not apply the same mechanism to ID3V2?     
+   */
+
   int offset = 3;
 
   d->title = stringHandler->parse(data.mid(offset, 30));

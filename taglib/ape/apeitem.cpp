@@ -249,13 +249,114 @@ void APE::Item::parse(const ByteVector &data)
     return;
   }
 
+  /*
+   * JBH NOTE: an APETageItem structure
+   *
+   *           valueLen(40)   |  flags(Text or Binary)  |   Key("Artist")      |   Value("Chopin")
+   *           4bytes            4bytes                     variableLen bytes      valueLen bytes (40bytes in this case)
+   *
+   * The followings are "Standard" APE tag fields (Keys) defined in the APE2.0 specification.
+   *     L"Title"
+   *     L"Artist"
+   *     L"Album"
+   *     L"Comment"
+   *     L"Year"
+   *     L"Track"
+   *     L"Genre"                JBH NOTE: Leo's ape reads only upto here. It can not read the cover art.
+   *     L"Cover Art (front)"    JBH NOTE: some bullshits say "Cover Art (front)" and others say "Cover Art (Front)"
+   *     L"Notes"
+   *     L"Lyrics"
+   *     L"Copyright"
+   *     L"Buy URL"
+   *     L"Artist URL"
+   *     L"Publisher URL"
+   *     L"File URL"
+   *     L"Copyright URL"
+   *     L"Media Jukebox Metadata"
+   *     L"Tool Name"
+   *     L"Tool Version"
+   *     L"Peak Level"
+   *     L"Replay Gain (radio)"
+   *     L"Replay Gain (album)"
+   *     L"Composer"
+   *     L"Keywords"
+   *
+   * JBH NOTE: In the real world, APE files authored by some fucking program have some weired-out-of-spec Key , such as "ALBUM ARTIST"
+   */
+
   const unsigned int valueLength  = data.toUInt(0, false);
   const unsigned int flags        = data.toUInt(4, false);
 
   // An item key can contain ASCII characters from 0x20 up to 0x7E, not UTF-8.
   // We assume that the validity of the given key has been checked.
 
+//JBH ==========================================================================<
+#define JBH_READ_SHORTER
+#ifndef JBH_READ_SHORTER
   d->key = String(&data[8], String::Latin1);
+#else
+  /*
+   * JBH FIXED: The original code make/get a key String ("Artist") using the whole ByteVector which contain the WHOLE TagItems data.
+   *            This is apparently ineffective, and cause a crash "std::bad_alloc" on some systems.
+   * 
+   *            When we get a key string,
+   *            Limiting ByteVector to a smaller fixed size (for example, 22 instead of 42247029 "the whole TagItems' ByteVector size")
+   *            - would be much performative, and
+   *            - most importantly, prevent the critiacal crash "std::bad_alloc" on some systems.
+   *
+   *            Well, Even though the length of "Key" is variable/unkown,
+   *            We can assume that the maximum length would 22 which is the size of L"Media Jukebox Metadata".
+   *
+   *            22 might be enough, but Lets assume it as 480 for safety.
+   *
+   */
+  // d->key = String(data.mid(8), String::Latin1);    //JBH NOTE: The original code make/get a key String ("Artist") using the whole ByteVector.
+  uint dataSize = data.size();
+  if (dataSize > 500)
+  {
+    /*
+     * JBH NOTE: If larger than 500, shorten it to 480,
+     *           which prevents from reading the whole ByteVector of (possibly) a large size such as X mega bytes due to the cover art.
+     */
+    const ByteVector keyByteVectorShortened = data.mid(8, 480); //JBH NOTE: Lets limit to use only the first 480 bytes.
+    d->key = String(keyByteVectorShortened, String::Latin1);
+  }
+  else
+  {
+    /*
+     * JBH NOTE: If smaller than 500, read it full using the whole ByteVector
+     */
+    d->key = String(data.mid(8), String::Latin1);
+  }
+  //JBH debug <
+  uint keySize = d->key.size();
+  String keyString = d->key;
+  //JBH debug >
+#endif
+//JBH ==========================================================================>
+
+//JBH ==========================================================================<
+#define JBH_SPECIAL_TREAT_APE_COVERART
+#ifdef JBH_SPECIAL_TREAT_APE_COVERART
+  /*
+   * JBH FIXED: Some fucking APE files does not set flags (TEXT|BINARY) properly, so a special treatment is required.
+   *            Moreover, some bullshits say "Cover Art (front)" and others say "Cover Art (Front)".
+   *            Check if "Key == Cover Art", set type to BINARY and read into d->value, not d->text.
+   *                   
+   */
+  if ( d->key.startsWith(String("Cover Art")) )
+  {
+    //JBH FIXME: Do not read in the cover art binary for now, util tags/taglibfile.cpp is ready to process it.
+    //           Also note that some APE file has 40M of the cover art binary, which takes much time to readin.
+    //           As of 2015/04/25, changed to read in the cover art binary.
+    setReadOnly(flags & 1);
+    setType(Binary);
+    const ByteVector value = data.mid(8 + d->key.size() + 1, valueLength);
+    d->value = value;
+    return;
+  }
+#endif
+//JBH ==========================================================================>
 
   const ByteVector value = data.mid(8 + d->key.size() + 1, valueLength);
 

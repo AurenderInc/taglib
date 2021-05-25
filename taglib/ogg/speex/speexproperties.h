@@ -108,6 +108,13 @@ namespace TagLib {
          */
         virtual int channels() const;
 
+//JBH ==========================================================================<
+        /*!
+         * Returns the bit width of audio sample.
+         */
+        virtual int bitwidth() const;
+//JBH ==========================================================================>
+
         /*!
          * Returns the Speex version, currently "0" (as specified by the spec).
          */

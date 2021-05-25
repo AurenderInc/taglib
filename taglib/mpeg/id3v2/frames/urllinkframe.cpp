@@ -153,6 +153,7 @@ String::Type UserUrlLinkFrame::textEncoding() const
 
 void UserUrlLinkFrame::setTextEncoding(String::Type encoding)
 {
+  //JBH: possible enum values: {Latin1, UTF16, UTF16BE, UTF8, UTF16LE}
   d->textEncoding = encoding;
 }
 
@@ -201,6 +202,7 @@ void UserUrlLinkFrame::parseFields(const ByteVector &data)
 
   int pos = 0;
 
+  //JBH: The first byte of a field is always the encoding type in id3v2 by the spec?
   d->textEncoding = String::Type(data[0]);
   pos += 1;
 

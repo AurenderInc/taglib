@@ -63,6 +63,10 @@
 #include "itfile.h"
 #include "xmfile.h"
 #include "mp4file.h"
+//JBH ==========================================================================<
+#include "dsffile.h"
+#include "dsdifffile.h"
+//JBH ==========================================================================>
 
 using namespace TagLib;
 
@@ -148,6 +152,12 @@ PropertyMap File::properties() const
     return dynamic_cast<const MP4::File* >(this)->properties();
   if(dynamic_cast<const ASF::File* >(this))
     return dynamic_cast<const ASF::File* >(this)->properties();
+//JBH ==========================================================================<
+  if(dynamic_cast<const DSF::File* >(this))
+    return dynamic_cast<const DSF::File* >(this)->properties();
+  if(dynamic_cast<const DSDIFF::File* >(this))
+    return dynamic_cast<const DSDIFF::File* >(this)->properties();
+//JBH ==========================================================================>
   return tag()->properties();
 }
 
@@ -177,6 +187,12 @@ void File::removeUnsupportedProperties(const StringList &properties)
     dynamic_cast<MP4::File* >(this)->removeUnsupportedProperties(properties);
   else if(dynamic_cast<ASF::File* >(this))
     dynamic_cast<ASF::File* >(this)->removeUnsupportedProperties(properties);
+//JBH ==========================================================================<
+  else if(dynamic_cast<DSF::File* >(this))
+    dynamic_cast<DSF::File* >(this)->removeUnsupportedProperties(properties);
+  else if(dynamic_cast<DSDIFF::File* >(this))
+    dynamic_cast<DSDIFF::File* >(this)->removeUnsupportedProperties(properties);
+//JBH ==========================================================================>
   else
     tag()->removeUnsupportedProperties(properties);
 }
@@ -219,6 +235,12 @@ PropertyMap File::setProperties(const PropertyMap &properties)
     return dynamic_cast<MP4::File* >(this)->setProperties(properties);
   else if(dynamic_cast<ASF::File* >(this))
     return dynamic_cast<ASF::File* >(this)->setProperties(properties);
+//JBH ==========================================================================<
+  else if(dynamic_cast<DSF::File* >(this))
+    return dynamic_cast<DSF::File* >(this)->setProperties(properties);
+  else if(dynamic_cast<DSDIFF::File* >(this))
+    return dynamic_cast<DSDIFF::File* >(this)->setProperties(properties);
+//JBH ==========================================================================>
   else
     return tag()->setProperties(properties);
 }
@@ -443,11 +465,42 @@ void File::clear()
   d->stream->clear();
 }
 
+/*
+ *===============================================================================
+ *JBH: TagLib limits:
+ *  32bit Linux:
+ *   std::numeric_limits<int>::max():          4bytes  2147483647
+ *   std::numeric_limits<unsigned int>::max(): 4bytes  4294967295
+ *   std::numeric_limits<int64_t>::max():      8bytes  9223372036854775807
+ *   std::numeric_limits<uint64_t>::max():     8bytes  18446744073709551615
+ *   std::numeric_limits<long>::max():         4bytes  2147483647
+ *   std::numeric_limits<unsigned long>::max():4bytes  4294967295
+ *   std::numeric_limits<size_t>::max():       4bytes  4294967295
+ *
+ *  64bit Linux:
+ *   std::numeric_limits<int>::max():          4bytes  2147483647
+ *   std::numeric_limits<unsigned int>::max(): 4bytes  4294967295
+ *   std::numeric_limits<int64_t>::max():      8bytes  9223372036854775807
+ *   std::numeric_limits<uint64_t>::max():     8bytes  18446744073709551615
+ *   std::numeric_limits<long>::max():         8bytes  9223372036854775807
+ *   std::numeric_limits<unsigned long>::max():8bytes  18446744073709551615
+ *   std::numeric_limits<size_t>::max():       8bytes  18446744073709551615
+ *
+ *   So,
+ *   Use ideally "uint64_t" for "size", "file length", "offset"
+ *   However, TagLib uses ultimately "fread()" in linux, which returns "size_t"
+ *   Using "uint64_t" is meaningless, unless the fread() in linux support the expanded size_t via the LARGE_FILE_SUPPORT feature
+ *===============================================================================
+ */
+
 long File::tell() const
 {
   return d->stream->tell();
 }
 
+//JBH FIXME: Consider using "unsigned long" to double the max file size that could be supported by TagLib.
+//           Or, if a negative value needed, use "int64_t" for both 32bit/64bit linux.
+//           Change all "long" in tfile.cpp to "unsigned long"
 long File::length()
 {
   return d->stream->length();

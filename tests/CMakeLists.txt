@@ -24,6 +24,10 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_SOURCE_DIR}/../taglib/s3m
   ${CMAKE_CURRENT_SOURCE_DIR}/../taglib/it
   ${CMAKE_CURRENT_SOURCE_DIR}/../taglib/xm
+#JBH ==========================================================================<
+  ${CMAKE_CURRENT_SOURCE_DIR}/../taglib/dsf
+  ${CMAKE_CURRENT_SOURCE_DIR}/../taglib/dsdiff
+#JBH ==========================================================================>
 )
 
 SET(test_runner_SRCS
@@ -66,6 +70,10 @@ SET(test_runner_SRCS
   test_mpc.cpp
   test_opus.cpp
   test_speex.cpp
+#JBH ==========================================================================<
+  test_dsf.cpp
+  test_dsdiff.cpp
+#JBH ==========================================================================>
 )
 
 INCLUDE_DIRECTORIES(${CPPUNIT_INCLUDE_DIR})

@@ -44,6 +44,35 @@
 //
 // http://www.informit.com/isapi/product_id~{9C84DAB4-FE6E-49C5-BB0A-FB50331233EA}/content/index.asp
 
+
+/*
+ *===============================================================================
+ *JBH: TagLib limits:
+ *  32bit Linux:
+ *   std::numeric_limits<int>::max():          4bytes  2147483647
+ *   std::numeric_limits<unsigned int>::max(): 4bytes  4294967295
+ *   std::numeric_limits<int64_t>::max():      8bytes  9223372036854775807
+ *   std::numeric_limits<uint64_t>::max():     8bytes  18446744073709551615
+ *   std::numeric_limits<long>::max():         4bytes  2147483647
+ *   std::numeric_limits<unsigned long>::max():4bytes  4294967295
+ *   std::numeric_limits<size_t>::max():       4bytes  4294967295
+ *
+ *  64bit Linux:
+ *   std::numeric_limits<int>::max():          4bytes  2147483647
+ *   std::numeric_limits<unsigned int>::max(): 4bytes  4294967295
+ *   std::numeric_limits<int64_t>::max():      8bytes  9223372036854775807
+ *   std::numeric_limits<uint64_t>::max():     8bytes  18446744073709551615
+ *   std::numeric_limits<long>::max():         8bytes  9223372036854775807
+ *   std::numeric_limits<unsigned long>::max():8bytes  18446744073709551615
+ *   std::numeric_limits<size_t>::max():       8bytes  18446744073709551615
+ *
+ *   So,
+ *   Use ideally "uint64_t" for "size", "file length", "offset"
+ *   However, TagLib uses ultimately "fread()" in linux, which returns "size_t"
+ *   Using "uint64_t" is meaningless, unless the fread() in linux support the expanded size_t via the LARGE_FILE_SUPPORT feature
+ *===============================================================================
+ */
+
 namespace TagLib {
 
 template <class TIterator>

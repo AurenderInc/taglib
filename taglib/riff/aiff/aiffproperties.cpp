@@ -111,6 +111,13 @@ int RIFF::AIFF::Properties::bitsPerSample() const
   return d->bitsPerSample;
 }
 
+//JBH ==========================================================================<
+int RIFF::AIFF::Properties::bitwidth() const //JBH
+{
+  return d->bitsPerSample;
+}
+//JBH ==========================================================================>
+
 int RIFF::AIFF::Properties::sampleWidth() const
 {
   return bitsPerSample();

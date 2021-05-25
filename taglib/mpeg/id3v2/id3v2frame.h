@@ -1,4 +1,4 @@
-/***************************************************************************
+﻿/***************************************************************************
     copyright            : (C) 2002 - 2008 by Scott Wheeler
     email                : wheeler@kde.org
  ***************************************************************************/
@@ -29,6 +29,7 @@
 #include "tstring.h"
 #include "tbytevector.h"
 #include "taglib_export.h"
+#include "taglib_config.h" //JBH: for JBH_USE_EMBEDDED_UNICODE_ENCODER
 
 namespace TagLib {
 
@@ -177,6 +178,12 @@ namespace TagLib {
        */
       Frame(Header *h);
 
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+      explicit Frame(const ByteVector &data, std::string orgCharSet, float orgCharSetConfidence);
+      Frame(Header *h, std::string orgCharSet, float orgCharSetConfidence);
+#endif
+//JBH ==========================================================================>
       /*!
        * Returns a pointer to the frame header.
        */
@@ -252,6 +259,27 @@ namespace TagLib {
        */
       String::Type checkTextEncoding(const StringList &fields,
                                      String::Type encoding) const;
+
+
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+  #ifdef _WIN32
+    //TagLib::FileName'의 클라이언트에서 DLL 인터페이스를 사용하도록 지정해야 합니다.
+    #pragma warning(push)
+    #pragma warning(disable:4251)
+  #endif
+      void setOrgCharSet(std::string orgCharSet);
+      std::string getOrgCharSet();
+      std::string _orgCharSet;
+      void  setOrgCharSetConfidence(float orgCharSetConfidence);
+      float getOrgCharSetConfidence();
+      float _orgCharSetConfidence;
+  #ifdef _WIN32
+    //TagLib::FileName'의 클라이언트에서 DLL 인터페이스를 사용하도록 지정해야 합니다.
+    #pragma warning(pop)
+  #endif
+#endif
+//JBH ==========================================================================>
 
 
       /*!

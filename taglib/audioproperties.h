@@ -103,6 +103,13 @@ namespace TagLib {
      */
     virtual int channels() const = 0;
 
+//JBH ==========================================================================<
+    /*!
+     * Returns bit width.
+     */
+    virtual int bitwidth() const = 0; //JBH
+//JBH ==========================================================================>
+
   protected:
 
     /*!

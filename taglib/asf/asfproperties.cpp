@@ -102,6 +102,13 @@ int ASF::Properties::bitsPerSample() const
   return d->bitsPerSample;
 }
 
+//JBH ==========================================================================<
+int ASF::Properties::bitwidth() const //JBH
+{
+  return 0;
+}
+//JBH ==========================================================================>
+
 ASF::Properties::Codec ASF::Properties::codec() const
 {
   return d->codec;

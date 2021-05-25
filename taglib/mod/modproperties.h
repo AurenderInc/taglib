@@ -45,6 +45,7 @@ namespace TagLib {
       int bitrate()              const;
       int sampleRate()           const;
       int channels()             const;
+      int bitwidth()             const; //JBH added
 
       unsigned int  instrumentCount()  const;
       unsigned char lengthInPatterns() const;

@@ -1,4 +1,4 @@
-/***************************************************************************
+﻿/***************************************************************************
     copyright            : (C) 2002 - 2008 by Scott Wheeler
     email                : wheeler@kde.org
  ***************************************************************************/
@@ -50,18 +50,66 @@ namespace
 
   // Converts a Latin-1 string into UTF-16(without BOM/CPU byte order)
   // and copies it to the internal buffer.
+  /*
+   *JBH: "Converts" is misleading. No unicode conversion occurs here. This just expands/copies 1 byte of s[n] into 2-bytes of data[n], with 0x00 prefixed.
+   */
+  /*
+   *JBH NOTE: For the equal opposite operation of copyFromLatin1 (supposedly "copyFromUTF16toLatin1"), use toCString().
+   */  
   void copyFromLatin1(std::wstring &data, const char *s, size_t length)
   {
+    //JBH: length is the number of "bytes" meaninigfull in s[]. length is not the number of characters
     data.resize(length);
 
     for(size_t i = 0; i < length; ++i)
       data[i] = static_cast<unsigned char>(s[i]);
+
+    /*
+     *JBH:
+     *    Ex1:
+     *    s[]="갈색 추억TPE1", length=9, so meaningful s[] is "갈색 추억" which consists of 9 (char) bytes and 5 characters.
+     *    length is the number (9) of "bytes" meaninigfull in s[]. length is not the number (5) of characters in s[].
+     *    The input s[] is a EUC-KR (Windows949) characters array.
+     *
+     *    '갈  s[0] b0  -->  data[0] 0x00b0
+     *         s[1] a5  -->  data[1] 0x00a5
+     *    '색' s[2] bb  -->  data[2] 0x00bb
+     *         s[3] f6  -->  data[3] 0x00f6
+     *    ' '  s[4] 20  -->  data[4] 0x0020
+     *    '추' s[5] c3  -->  data[5] 0x00c3
+     *         s[6] df  -->  data[6] 0x00df
+     *    '억' s[7] be  -->  data[7] 0x00be
+     *         s[8] ef  -->  data[8] 0x00ef
+     *
+     *    data[] will be displayed L"°¥»ö Ãß¾ï" (looks broken), while s[] remains "갈색 추억"
+     *
+     *
+     *    Ex2:
+     *    s[]="BalladUSLT", length=6, so meaningful s[] is "Ballad" which consists of 6 (char) bytes and 6 characters.
+     *
+     *    'B' s[0] 0x42  -->  data[0] 0x0042
+     *    'a' s[0] 0x61  -->  data[1] 0x0061
+     *    'l' s[0] 0x6c  -->  data[2] 0x006c
+     *    'l' s[0] 0x6c  -->  data[3] 0x006c
+     *    'a' s[0] 0x61  -->  data[4] 0x0061
+     *    'd' s[0] 0x64  -->  data[5] 0x0064
+     *
+     *    data[] will be displayed L"Ballad", while s[] remains "Ballad"
+     */
   }
 
   // Converts a UTF-8 string into UTF-16(without BOM/CPU byte order)
   // and copies it to the internal buffer.
   void copyFromUTF8(std::wstring &data, const char *s, size_t length)
   {
+    /*
+     *JBH: Example: Weston Non-1-Byte UTF8 encoded string of Western Languages:
+     *     "Dvořák: Cello Concerto"
+     *
+     * 44 76 6f c5 99 c3 a1 6b 3a 20 43 65 6c 6c 6f 20 43 6f 6e 63 65 72 74 6f
+     * D  v  o  ř     á     k  :     C  e  l  l  o     C  o  n  c  e  r  t  o
+     */
+
     data.resize(length);
 
     try {
@@ -70,7 +118,7 @@ namespace
     }
     catch(const utf8::exception &e) {
       const String message(e.what());
-      debug("String::copyFromUTF8() - UTF8-CPP error: " + message);
+      //JBH too many logs    debug("String::copyFromUTF8() - UTF8-CPP error: " + message);
       data.clear();
     }
   }
@@ -102,8 +150,15 @@ namespace
   template <typename T>
   void copyFromUTF16(std::wstring &data, const T *s, size_t length, String::Type t)
   {
+    /*
+     *JBH: This is typically called for a file path, (not for frame/tag which is mostly encoded by UTF8)
+     *
+     *     L"D:/OpenShare/00 Music1/Mstislav Rostropovich -  Dvořák Cello Concerto (2017) [Hi-Res]/01. Cello Concerto in B Minor, Op. 104 I. Allegro.flac"
+     */
+
     bool swap;
     if(t == String::UTF16) {
+      //JBH: UTF16, but LE/BE not determined yet case
       if(length < 1) {
         debug("String::copyFromUTF16() - Invalid UTF16 string. Too short to have a BOM.");
         return;
@@ -122,6 +177,7 @@ namespace
       length--;
     }
     else {
+      //JBH: UTF16, and LE/BE determined case
       swap = (t != wcharByteOrder());
     }
 
@@ -148,6 +204,7 @@ public:
    * Stores string in UTF-16. The byte order depends on the CPU endian.
    */
   TagLib::wstring data;
+  //JBH: TagLib::wstring is defined in taglib.h, such as "typedef std::basic_string<wchar_t> wstring"
 
   /*!
    * This is only used to hold the the most recent value of toCString().
@@ -292,6 +349,7 @@ TagLib::wstring String::toWString() const
 
 const char *String::toCString(bool unicode) const
 {
+  //JBH NOTE: This toCString() could be used for the equal opposite of copyFromLatin1().
   d->cstring = to8Bit(unicode);
   return d->cstring.c_str();
 }
@@ -438,7 +496,7 @@ ByteVector String::data(Type t) const
       }
       catch(const utf8::exception &e) {
         const String message(e.what());
-        debug("String::data() - UTF8-CPP error: " + message);
+        //JBH too many logs    debug("String::data() - UTF8-CPP error: " + message);
         v.clear();
       }
 
@@ -548,6 +606,21 @@ String String::number(int n) // static
 {
   return Utils::formatString("%d", n);
 }
+
+//JBH ==========================================================================<
+String String::number(unsigned int n) // static
+{
+  return Utils::formatString("%u", n);
+}
+String String::number(long n) // static
+{
+  return Utils::formatString("%ld", n);
+}
+String String::number(unsigned long n) // static
+{
+  return Utils::formatString("%lu", n);
+}
+//JBH ==========================================================================<
 
 wchar_t &String::operator[](int i)
 {

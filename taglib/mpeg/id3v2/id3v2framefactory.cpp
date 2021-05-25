@@ -1,4 +1,4 @@
-/***************************************************************************
+﻿/***************************************************************************
     copyright            : (C) 2002 - 2008 by Scott Wheeler
     email                : wheeler@kde.org
  ***************************************************************************/
@@ -48,6 +48,7 @@
 #include "frames/tableofcontentsframe.h"
 #include "frames/podcastframe.h"
 
+
 using namespace TagLib;
 using namespace ID3v2;
 
@@ -92,11 +93,24 @@ public:
     defaultEncoding(String::Latin1),
     useDefaultEncoding(false) {}
 
+  //JBH: possible enum values: {Latin1, UTF16, UTF16BE, UTF8, UTF16LE}
   String::Type defaultEncoding;
   bool useDefaultEncoding;
 
   template <class T> void setTextEncoding(T *frame)
   {
+    /*
+     *JBH: useDefaultEncoding is inited/kept remaining as FALSE,
+     *     until somebody (external to TagLib) calls TagLib::FrameFactory::setDefaultTextEncoding().
+     *     TagLib (by itself) does not call this setDefaultTextEncoding.
+     *     So, this setTextEncoding() is no-op if no external app has called setDefaultTextEncoding.
+     *
+     *     An app (Kid3) does not call/use TagLib::FrameFactory::setDefaultTextEncoding().
+     *     Instead, Kid3 define/use its own setDefaultTextEncoding().
+     */
+
+    //JBH: not called mostly.  
+    //JBH: possible enum values: {Latin1, UTF16, UTF16BE, UTF8, UTF16LE}
     if(useDefaultEncoding)
       frame->setTextEncoding(defaultEncoding);
   }
@@ -125,12 +139,90 @@ Frame *FrameFactory::createFrame(const ByteVector &data, unsigned int version) c
   return createFrame(data, &tagHeader);
 }
 
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+Frame *FrameFactory::createFrame(const ByteVector &origData, Header *tagHeader, std::string orgCharSet, float orgCharSetConfidence) const
+#else
 Frame *FrameFactory::createFrame(const ByteVector &origData, Header *tagHeader) const
+#endif
+//JBH ==========================================================================>
 {
+  /*
+   *JBH: Artist: "벤", Title: "갈색 추억"   EUC-KR encoded.
+   *     Note: EUC-KR is treated as Latin1 in TagLib (because it is marked nor UTF8 neither UTF16).
+   *     
+   *  0x54 'T'
+   *  0x52 'R'
+   *  0x43 'C'
+   *  0x4b 'K'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x02 '\x2'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x31 '1'
+   *  
+   *  
+   *  0x54 'T'
+   *  0x50 'P'
+   *  0x4f 'O'
+   *  0x53 'S'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x02 '\x2'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x31 '1'
+   *  
+   *  
+   *  0x54 'T'
+   *  0x49 'I'
+   *  0x54 'T'
+   *  0x32 '2'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x0a '\n'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0xb0 갈 (EUC-KR)
+   *  0xa5 
+   *  0xbb 색 (EUC-KR)
+   *  0xf6 
+   *  0x20 ' '
+   *  0xc3 추 (EUC-KR)
+   *  0xdf 
+   *  0xbe 억 (EUC-KR)
+   *  0xef 
+   *  
+   *  
+   *  0x54 'T'
+   *  0x50 'P'
+   *  0x45 'E'
+   *  0x31 '1'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x03 '\x3'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0xba 벤 (EUC-KR)
+   *  0xa5
+   */
+
+
+
   ByteVector data = origData;
   unsigned int version = tagHeader->majorVersion();
   Frame::Header *header = new Frame::Header(data, version);
   ByteVector frameID = header->frameID();
+  TagLib::String frameID_string = TagLib::String(frameID); //JBH debug
 
   // A quick sanity check -- make sure that the frameID is 4 uppercase Latin1
   // characters.  Also make sure that there is data in the frame.
@@ -191,6 +283,10 @@ Frame *FrameFactory::createFrame(const ByteVector &origData, Header *tagHeader) 
 
   frameID = header->frameID();
 
+  //JBH debug <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+  ByteVector frameIDbv = ByteVector(frameID.data(), frameID.size()); //take my own data only from the whole ByteVector.
+  //JBH debug >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
   // This is where things get necissarily nasty.  Here we determine which
   // Frame subclass (or if none is found simply an Frame) based
   // on the frame ID.  Since there are a lot of possibilities, that means
@@ -200,12 +296,25 @@ Frame *FrameFactory::createFrame(const ByteVector &origData, Header *tagHeader) 
 
   // Apple proprietary WFED (Podcast URL), MVNM (Movement Name), MVIN (Movement Number) are in fact text frames.
   if(frameID.startsWith("T") || frameID == "WFED" || frameID == "MVNM" || frameID == "MVIN") {
+    /*
+     * JBH: In the middle of creating a XXXXFrame, the client-side-defined-and-registered string handler will be called back.
+     *      In AMS, TextCodecStringHandlerForID3v2::parse()@taglibfile.cpp@kid3 will be called back,
+     * where encoding to unicode is being done.
+     */
 
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+    TextIdentificationFrame *f = frameID != "TXXX"
+      ? new TextIdentificationFrame(data, header, orgCharSet, orgCharSetConfidence)
+      : new UserTextIdentificationFrame(data, header); //JBH: client-side-defined string handler will be called back
+#else
     TextIdentificationFrame *f = frameID != "TXXX"
       ? new TextIdentificationFrame(data, header)
-      : new UserTextIdentificationFrame(data, header);
+      : new UserTextIdentificationFrame(data, header); //JBH: client-side-defined string handler will be called back
+#endif
+//JBH ==========================================================================>
 
-    d->setTextEncoding(f);
+    d->setTextEncoding(f); //JBH FIXME: nothing happens for now. It should set to UTF16 if the client-side-defined string handler has done a unicode-encoding.
 
     if(frameID == "TCON")
       updateGenre(f);
@@ -216,7 +325,13 @@ Frame *FrameFactory::createFrame(const ByteVector &origData, Header *tagHeader) 
   // Comments (frames 4.10)
 
   if(frameID == "COMM") {
+//JBH ==========================================================================<
+//#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+//    CommentsFrame *f = new CommentsFrame(data, header, orgCharSet, orgCharSetConfidence);
+//#else
     CommentsFrame *f = new CommentsFrame(data, header);
+//#endif
+//JBH ==========================================================================>
     d->setTextEncoding(f);
     return f;
   }
@@ -271,7 +386,13 @@ Frame *FrameFactory::createFrame(const ByteVector &origData, Header *tagHeader) 
   // Unsynchronized lyric/text transcription (frames 4.8)
 
   if(frameID == "USLT") {
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+    UnsynchronizedLyricsFrame *f = new UnsynchronizedLyricsFrame(data, header, orgCharSet, orgCharSetConfidence);
+#else
     UnsynchronizedLyricsFrame *f = new UnsynchronizedLyricsFrame(data, header);
+#endif
+//JBH ==========================================================================>
     if(d->useDefaultEncoding)
       f->setTextEncoding(d->defaultEncoding);
     return f;
@@ -280,7 +401,13 @@ Frame *FrameFactory::createFrame(const ByteVector &origData, Header *tagHeader) 
   // Synchronised lyrics/text (frames 4.9)
 
   if(frameID == "SYLT") {
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+    SynchronizedLyricsFrame *f = new SynchronizedLyricsFrame(data, header, orgCharSet, orgCharSetConfidence);
+#else
     SynchronizedLyricsFrame *f = new SynchronizedLyricsFrame(data, header);
+#endif
+//JBH ==========================================================================>
     if(d->useDefaultEncoding)
       f->setTextEncoding(d->defaultEncoding);
     return f;
@@ -366,6 +493,33 @@ String::Type FrameFactory::defaultTextEncoding() const
 
 void FrameFactory::setDefaultTextEncoding(String::Type encoding)
 {
+  /*
+   *JBH: comments from Kid3::TagLibFile
+   *  Do not use TagLib::ID3v2::FrameFactory::setDefaultTextEncoding(),
+   *  it will change the encoding of existing frames read in, not only
+   *  of newly created frames, which is really not what we want!
+   *
+   *  JBH: what does this mean?
+   *       Kid3 will
+   *       For read,  use TagLib::setDefaultTextEncoding ?
+   *       For write, use Kid3::setDefaultTextEncoding   ?
+   *
+   * JBH: Kid3::TagLibFile has (implements) its own setDefaultTextEncoding().
+   *      What's the difference between TagLib::setDefaultTextEncoding and Kid3::setDefaultTextEncoding()?
+   *      How are they related?
+   */
+
+  /*
+   *JBH: comments from id3v2framefactory.h
+   * Set the default text encoding for all text frames that are created to
+   * \a encoding.  If no value is set the frames with either default to the
+   * encoding type that was parsed and new frames default to Latin1.
+   *
+   * Valid string types for ID3v2 tags are Latin1, UTF8, UTF16 and UTF16BE.
+   *
+   * \see defaultTextEncoding()
+   */
+
   d->useDefaultEncoding = true;
   d->defaultEncoding = encoding;
 }
@@ -487,8 +641,8 @@ bool FrameFactory::updateFrame(Frame::Header *header) const
        frameID == "TSI" ||
        frameID == "TDA")
     {
-      debug("ID3v2.4 no longer supports the frame type " + String(frameID) +
-            ".  It will be discarded from the tag.");
+//JBH COMMENTED-OUT      debug("ID3v2.4 no longer supports the frame type " + String(frameID) +
+//JBH COMMENTED-OUT            ".  It will be discarded from the tag.");
       return false;
     }
 
@@ -514,8 +668,8 @@ bool FrameFactory::updateFrame(Frame::Header *header) const
        frameID == "TSIZ" ||
        frameID == "TDAT")
     {
-      debug("ID3v2.4 no longer supports the frame type " + String(frameID) +
-            ".  It will be discarded from the tag.");
+//JBH COMMENTED-OUT      debug("ID3v2.4 no longer supports the frame type " + String(frameID) +
+//JBH COMMENTED-OUT            ".  It will be discarded from the tag.");
       return false;
     }
 

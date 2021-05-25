@@ -122,6 +122,14 @@ int APE::Properties::bitsPerSample() const
   return d->bitsPerSample;
 }
 
+//JBH ==========================================================================<
+int APE::Properties::bitwidth() const //JBH
+{
+  return d->bitsPerSample;
+}
+//JBH ==========================================================================>
+
+
 unsigned int APE::Properties::sampleFrames() const
 {
   return d->sampleFrames;

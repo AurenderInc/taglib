@@ -1,4 +1,4 @@
-/***************************************************************************
+﻿/***************************************************************************
     copyright            : (C) 2002 - 2008 by Scott Wheeler
     email                : wheeler@kde.org
  ***************************************************************************/
@@ -29,6 +29,13 @@
 #include "tpropertymap.h"
 #include "id3v1genres.h"
 
+//JBH <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+#include "charsetdetector.h"
+#include "charsetconverter.h"
+#endif
+//JBH >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
 using namespace TagLib;
 using namespace ID3v2;
 
@@ -44,6 +51,22 @@ public:
 // TextIdentificationFrame public members
 ////////////////////////////////////////////////////////////////////////////////
 
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+TextIdentificationFrame::TextIdentificationFrame(const ByteVector &type, String::Type encoding, std::string orgCharSet, float orgCharSetConfidence) :
+  Frame(type, orgCharSet, orgCharSetConfidence),
+  d(new TextIdentificationFramePrivate())
+{
+  d->textEncoding = encoding;
+}
+
+TextIdentificationFrame::TextIdentificationFrame(const ByteVector &data, std::string orgCharSet, float orgCharSetConfidence) :
+  Frame(data, orgCharSet, orgCharSetConfidence),
+  d(new TextIdentificationFramePrivate())
+{
+  setData(data);
+}
+#else
 TextIdentificationFrame::TextIdentificationFrame(const ByteVector &type, String::Type encoding) :
   Frame(type),
   d(new TextIdentificationFramePrivate())
@@ -57,6 +80,8 @@ TextIdentificationFrame::TextIdentificationFrame(const ByteVector &data) :
 {
   setData(data);
 }
+#endif
+//JBH ==========================================================================>
 
 TextIdentificationFrame *TextIdentificationFrame::createTIPLFrame(const PropertyMap &properties) // static
 {
@@ -116,6 +141,7 @@ String::Type TextIdentificationFrame::textEncoding() const
 
 void TextIdentificationFrame::setTextEncoding(String::Type encoding)
 {
+  //JBH: possible enum values: {Latin1, UTF16, UTF16BE, UTF8, UTF16LE}
   d->textEncoding = encoding;
 }
 
@@ -184,6 +210,75 @@ PropertyMap TextIdentificationFrame::asProperties() const
 
 void TextIdentificationFrame::parseFields(const ByteVector &data)
 {
+  /*
+   *JBH: Artist: "벤", Title: "갈색 추억"   EUC-KR encoded.
+   *     EUC-KR is treated as Latin1 in TagLib
+   *     
+   *  0x54 'T'
+   *  0x52 'R'
+   *  0x43 'C'
+   *  0x4b 'K'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x02 '\x2'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x31 '1'
+   *  
+   *  
+   *  0x54 'T'
+   *  0x50 'P'
+   *  0x4f 'O'
+   *  0x53 'S'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x02 '\x2'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x31 '1'
+   *  
+   *  
+   *  0x54 'T'
+   *  0x49 'I'
+   *  0x54 'T'
+   *  0x32 '2'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x0a '\n'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0xb0 갈 (EUC-KR)
+   *  0xa5 
+   *  0xbb 색 (EUC-KR)
+   *  0xf6 
+   *  0x20 ' '
+   *  0xc3 추 (EUC-KR)
+   *  0xdf 
+   *  0xbe 억 (EUC-KR)
+   *  0xef 
+   *  
+   *  
+   *  0x54 'T'
+   *  0x50 'P'
+   *  0x45 'E'
+   *  0x31 '1'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x03 '\x3'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0x00 '\0'
+   *  0xba 벤 (EUC-KR)
+   *  0xa5
+   */
+
   // Don't try to parse invalid frames
 
   if(data.size() < 2)
@@ -191,6 +286,7 @@ void TextIdentificationFrame::parseFields(const ByteVector &data)
 
   // read the string data type (the first byte of the field data)
 
+  //JBH: The first byte of a field is always the encoding type in id3v2 by the spec?
   d->textEncoding = String::Type(data[0]);
 
   // split the byte array into chunks based on the string type (two byte delimiter
@@ -218,7 +314,48 @@ void TextIdentificationFrame::parseFields(const ByteVector &data)
   for(ByteVectorList::ConstIterator it = l.begin(); it != l.end(); it++) {
     if(!(*it).isEmpty()) {
       if(d->textEncoding == String::Latin1)
+      {
+//JBH <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+        int res;
+        std::string charset;
+        float confidence;
+        String encoded_string;
+        String frame_data_string(*it); //JBH debug
+
+        //confidence = CHARSETDETECTOR::detectCharSet(data, charset);
+        //confidence = CHARSETDETECTOR::detectCharSet(*it, charset);
+        charset    = getOrgCharSet();
+        confidence = getOrgCharSetConfidence();
+        if ( (confidence > CHARSETDETECTOR_CONFIDENCE_THRESHOLD) && (charset != "UNDETECTED") && (charset != "UNKNOWN") && (charset != "NOUSE") && (charset != "ASCII") && (charset != "WINDOWS-1252") && (charset != "UTF-8") )
+        {
+          res = CHARSETCONVERTER::encodeByteVectorToUTF16(*it, encoded_string, charset, CHARSETCONVERTER_TO_CHARSET);
+          if (res ==0)
+          {
+            d->fieldList.append(encoded_string);
+          }
+          else
+          {
+            //fallback upon failure
+            d->fieldList.append(Tag::latin1StringHandler()->parse(*it));
+          }
+        }
+        else
+        {
+          TagLib::String external_stringhandler_encoded_string = Tag::latin1StringHandler()->parse(*it);
+          d->fieldList.append(external_stringhandler_encoded_string);
+        }
+#else
+        /*
+         * JBH: callback the client-side-defined unicode encoder, if registered at the init stage of TagLib.
+         *      EX: at taglibfile.cpp@kid3, TagLib::ID3v2::Tag::setLatin1StringHandler(m_textCodecStringHandlerForID3v2); //JBH: register our own unicode encoder to TagLib, so that TagLib will call back.
+         *
+         * JBH: All "Non-Unicode" strings, such as EUC-KR and real Latin1, are marked "Latin1" in taglib.
+         */
         d->fieldList.append(Tag::latin1StringHandler()->parse(*it));
+#endif
+//JBH >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>        
+      }
       else
         d->fieldList.append(String(*it, d->textEncoding));
     }
@@ -252,12 +389,23 @@ ByteVector TextIdentificationFrame::renderFields() const
 // TextIdentificationFrame private members
 ////////////////////////////////////////////////////////////////////////////////
 
+//JBH ==========================================================================<
+#ifdef JBH_USE_EMBEDDED_UNICODE_ENCODER
+TextIdentificationFrame::TextIdentificationFrame(const ByteVector &data, Header *h, std::string orgCharSet, float orgCharSetConfidence) :
+  Frame(h, orgCharSet, orgCharSetConfidence),
+  d(new TextIdentificationFramePrivate())
+{
+  parseFields(fieldData(data));
+}
+#else
 TextIdentificationFrame::TextIdentificationFrame(const ByteVector &data, Header *h) :
   Frame(h),
   d(new TextIdentificationFramePrivate())
 {
   parseFields(fieldData(data));
 }
+#endif
+//JBH ==========================================================================>
 
 PropertyMap TextIdentificationFrame::makeTIPLProperties() const
 {
